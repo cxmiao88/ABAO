@@ -88,14 +88,16 @@
                     <span class="menu-item-label" :class="collapsed && 'lg:hidden'">{{ __('nav.projects') }}</span>
                 </a>
             </li>
-            <li>
-                <a title="{{ __('nav.analytics') }}" {{ wireNavigate() }}
-                    class="{{ request()->is('analytics') ? 'menu-item menu-item-active' : 'menu-item' }}"
-                    :class="collapsed && 'lg:justify-center lg:px-0'" href="{{ route('analytics') }}">
-                    <x-reicon name="analytics" class="menu-item-icon" />
-                    <span class="menu-item-label" :class="collapsed && 'lg:hidden'">{{ __('nav.analytics') }}</span>
-                </a>
-            </li>
+            @if (Route::has('analytics'))
+                <li>
+                    <a title="{{ __('nav.analytics') }}" {{ wireNavigate() }}
+                        class="{{ request()->is('analytics') ? 'menu-item menu-item-active' : 'menu-item' }}"
+                        :class="collapsed && 'lg:justify-center lg:px-0'" href="{{ route('analytics') }}">
+                        <x-reicon name="analytics" class="menu-item-icon" />
+                        <span class="menu-item-label" :class="collapsed && 'lg:hidden'">{{ __('nav.analytics') }}</span>
+                    </a>
+                </li>
+            @endif
             @can('canAccessTerminal')
                 <li>
                     <a title="{{ __('nav.terminal') }}"
