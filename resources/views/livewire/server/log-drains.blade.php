@@ -1,6 +1,6 @@
 <div>
     <x-slot:title>
-        {{ data_get_str($server, 'name')->limit(10) }} > Log Drains | Coolify
+        {{ data_get_str($server, 'name')->limit(10) }} > {{ __('server.menu_log_drains') }} | Coolify
     </x-slot>
 
     <livewire:server.navbar :server="$server" />
@@ -11,15 +11,14 @@
 
         <div class="application-settings-form flex w-full flex-col gap-6">
             @if ($server->isFunctional())
-                <x-application.settings-section id="server-log-drains-overview-section" title="Log drains"
-                    helper="Forward container logs from this server to one external destination.">
+                <x-application.settings-section id="server-log-drains-overview-section" :title="__('server.menu_log_drains')"
+                    :helper="__('server.ld_helper')">
                     <x-slot:actions>
-                        <x-status-badge :status="$server->isLogDrainEnabled() ? 'Active' : 'Not configured'"
+                        <x-status-badge :status="$server->isLogDrainEnabled() ? __('server.ld_active') : __('server.ld_not_configured')"
                             :type="$server->isLogDrainEnabled() ? 'success' : 'neutral'" />
                     </x-slot:actions>
                     <p class="text-sm leading-6 text-neutral-600 dark:text-fg-dim">
-                        Only one log drain can be active at a time. Disable the current destination before enabling
-                        another provider.
+                        {{ __('server.ld_only_one') }}
                     </p>
                 </x-application.settings-section>
 
@@ -27,66 +26,66 @@
                     <x-unsaved-bar action="submit" />
 
                     <x-application.settings-section id="server-new-relic-drain-section" title="New Relic"
-                        helper="Send logs through the New Relic Log API.">
+                        :helper="__('server.ld_newrelic_helper')">
                         <div class="grid gap-4 lg:grid-cols-3">
-                            <x-forms.listbox canGate="update" :canResource="$server" id="isLogDrainNewRelicEnabled" label="Status"
+                            <x-forms.listbox canGate="update" :canResource="$server" id="isLogDrainNewRelicEnabled" :label="__('server.ld_status_label')"
                                 onChange="instantSave" :options="[
-                                    ['value' => false, 'label' => 'Disabled'],
-                                    ['value' => true, 'label' => 'Enabled'],
+                                    ['value' => false, 'label' => __('server.ld_disabled')],
+                                    ['value' => true, 'label' => __('server.ld_enabled')],
                                 ]"
                                 :disabled="$isLogDrainAxiomEnabled || $isLogDrainCustomEnabled || !auth()->user()->can('update', $server)" />
                             <x-forms.input canGate="update" :canResource="$server" type="password" required
-                                id="logDrainNewRelicLicenseKey" label="License key"
+                                id="logDrainNewRelicLicenseKey" :label="__('server.ld_license_key')"
                                 :disabled="$server->isLogDrainEnabled()" />
                             <x-forms.input canGate="update" :canResource="$server" required
-                                id="logDrainNewRelicBaseUri" label="Endpoint"
+                                id="logDrainNewRelicBaseUri" :label="__('server.ld_endpoint')"
                                 placeholder="https://log-api.eu.newrelic.com/log/v1"
-                                helper="Use the EU or US New Relic Log API endpoint."
+                                :helper="__('server.ld_newrelic_endpoint_helper')"
                                 :disabled="$server->isLogDrainEnabled()" />
                         </div>
                     </x-application.settings-section>
                     <x-application.settings-section id="server-axiom-drain-section" title="Axiom"
-                        helper="Send logs to an Axiom dataset using its ingest API.">
+                        :helper="__('server.ld_axiom_helper')">
                         <div class="grid gap-4 lg:grid-cols-3">
-                            <x-forms.listbox canGate="update" :canResource="$server" id="isLogDrainAxiomEnabled" label="Status"
+                            <x-forms.listbox canGate="update" :canResource="$server" id="isLogDrainAxiomEnabled" :label="__('server.ld_status_label')"
                                 onChange="instantSave" :options="[
-                                    ['value' => false, 'label' => 'Disabled'],
-                                    ['value' => true, 'label' => 'Enabled'],
+                                    ['value' => false, 'label' => __('server.ld_disabled')],
+                                    ['value' => true, 'label' => __('server.ld_enabled')],
                                 ]"
                                 :disabled="$isLogDrainNewRelicEnabled || $isLogDrainCustomEnabled || !auth()->user()->can('update', $server)" />
                             <x-forms.input canGate="update" :canResource="$server" type="password" required
-                                id="logDrainAxiomApiKey" label="API key"
+                                id="logDrainAxiomApiKey" :label="__('server.ld_api_key')"
                                 :disabled="$server->isLogDrainEnabled()" />
                             <x-forms.input canGate="update" :canResource="$server" required
-                                id="logDrainAxiomDatasetName" label="Dataset name"
+                                id="logDrainAxiomDatasetName" :label="__('server.ld_dataset_name')"
                                 :disabled="$server->isLogDrainEnabled()" />
                         </div>
                     </x-application.settings-section>
-                    <x-application.settings-section id="server-custom-drain-section" title="Custom Fluent Bit"
-                        helper="Provide a custom Fluent Bit output and optional parser configuration.">
+                    <x-application.settings-section id="server-custom-drain-section" :title="__('server.ld_custom_title')"
+                        :helper="__('server.ld_custom_helper')">
                         <div class="mb-4 max-w-sm">
-                            <x-forms.listbox canGate="update" :canResource="$server" id="isLogDrainCustomEnabled" label="Status"
+                            <x-forms.listbox canGate="update" :canResource="$server" id="isLogDrainCustomEnabled" :label="__('server.ld_status_label')"
                                 onChange="instantSave" :options="[
-                                    ['value' => false, 'label' => 'Disabled'],
-                                    ['value' => true, 'label' => 'Enabled'],
+                                    ['value' => false, 'label' => __('server.ld_disabled')],
+                                    ['value' => true, 'label' => __('server.ld_enabled')],
                                 ]"
                                 :disabled="$isLogDrainNewRelicEnabled || $isLogDrainAxiomEnabled || !auth()->user()->can('update', $server)" />
                         </div>
                         <div class="grid gap-4 lg:grid-cols-2">
                             <x-forms.textarea canGate="update" :canResource="$server" rows="8" required
-                                id="logDrainCustomConfig" label="Fluent Bit configuration"
+                                id="logDrainCustomConfig" :label="__('server.ld_fluentbit_config')"
                                 :disabled="$server->isLogDrainEnabled()" />
                             <x-forms.textarea canGate="update" :canResource="$server" rows="8"
-                                id="logDrainCustomConfigParser" label="Parser configuration"
+                                id="logDrainCustomConfigParser" :label="__('server.ld_parser_config')"
                                 :disabled="$server->isLogDrainEnabled()" />
                         </div>
                     </x-application.settings-section>
                 </form>
             @else
-                <x-application.settings-section title="Log drains"
-                    helper="Forward container logs from this server to an external destination.">
-                    <x-empty size="sm" title="Server validation required"
-                        description="Validate this server before configuring log drains."
+                <x-application.settings-section :title="__('server.menu_log_drains')"
+                    :helper="__('server.ld_helper_alt')">
+                    <x-empty size="sm" :title="__('server.status_validation_required')"
+                        :description="__('server.ld_needs_validation')"
                         icon-name="notifications" />
                 </x-application.settings-section>
             @endif

@@ -1,6 +1,6 @@
 <div>
     <x-slot:title>
-        Proxy Dynamic Configuration | Coolify
+        {{ __('server.pxdc_title') }} | Coolify
     </x-slot>
 
     <livewire:server.navbar :server="$server" />
@@ -14,19 +14,19 @@
                 <div class="flex flex-wrap items-start justify-between gap-3 px-1">
                     <div>
                         <h2 class="text-sm! font-medium text-neutral-950 dark:text-fg">
-                            Dynamic configurations
+                            {{ __('server.pxdc_heading') }}
                         </h2>
                         <p class="mt-1 text-xs text-neutral-500 dark:text-fg-dim">
-                            Manage additional proxy routes, middleware, and services loaded at runtime.
+                            {{ __('server.pxdc_description') }}
                         </p>
                     </div>
                     <div class="flex items-center gap-2">
                         <x-forms.button wire:click="loadDynamicConfigurations">
                             <x-reicon name="refresh" class="size-3.5" />
-                            Reload
+                            {{ __('server.pxdc_reload') }}
                         </x-forms.button>
                         @can('update', $server)
-                            <x-modal-input buttonTitle="+ Add" title="New Dynamic Configuration">
+                            <x-modal-input :buttonTitle="__('server.add_plus')" :title="__('server.pxdc_new_title')">
                                 <livewire:server.proxy.new-dynamic-configuration :server_id="$server->id" />
                             </x-modal-input>
                         @endcan
@@ -36,7 +36,7 @@
                 <div x-init="$wire.initLoadDynamicConfigurations" class="contents">
                     <div wire:loading wire:target="initLoadDynamicConfigurations"
                         class="rounded-lg border border-neutral-200 p-6 dark:border-white/[0.08]">
-                        <x-loading text="Loading dynamic configurations…" />
+                        <x-loading :text="__('server.pxdc_loading')" />
                     </div>
 
                     @if ($contents?->isNotEmpty())
@@ -55,7 +55,7 @@
                                 wire:key="proxy-dynamic-configuration-{{ $fileName }}">
                                 <x-slot:actions>
                                     @if ($isManagedConfiguration)
-                                        <x-status-badge status="Managed" type="neutral" />
+                                        <x-status-badge :status="__('server.pxdc_managed')" type="neutral" />
                                     @else
                                         <livewire:server.proxy.dynamic-configuration-navbar
                                             :server_id="$server->id" :server="$server" :fileName="$fileName"
@@ -68,24 +68,24 @@
                                         rows="8" />
                                 @else
                                     <p class="text-xs text-neutral-500 dark:text-fg-dim">
-                                        You do not have permission to view the contents of this configuration.
+                                        {{ __('server.pxdc_no_permission') }}
                                     </p>
                                 @endcan
                             </x-application.settings-section>
                         @endforeach
                     @else
-                        <x-application.settings-section wire:loading.remove title="Dynamic configurations">
-                            <x-empty size="sm" title="No dynamic configurations"
-                                description="Add a configuration file to extend the proxy at runtime."
+                        <x-application.settings-section wire:loading.remove :title="__('server.pxdc_heading')">
+                            <x-empty size="sm" :title="__('server.pxdc_empty_title')"
+                                :description="__('server.pxdc_empty_description')"
                                 icon-name="file-content" />
                         </x-application.settings-section>
                     @endif
                 </div>
             @else
-                <x-application.settings-section title="Dynamic configurations"
-                    helper="Manage additional runtime proxy configuration.">
-                    <x-empty size="sm" title="Server validation required"
-                        description="Validate this server before loading proxy configuration."
+                <x-application.settings-section :title="__('server.pxdc_heading')"
+                    :helper="__('server.pxdc_helper')">
+                    <x-empty size="sm" :title="__('server.status_validation_required')"
+                        :description="__('server.pxdc_needs_validation')"
                         icon-name="file-content" />
                 </x-application.settings-section>
             @endif

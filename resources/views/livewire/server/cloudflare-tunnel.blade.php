@@ -1,6 +1,6 @@
 <div>
     <x-slot:title>
-        {{ data_get_str($server, 'name')->limit(10) }} > Cloudflare Tunnel | Coolify
+        {{ data_get_str($server, 'name')->limit(10) }} > {{ __('server.menu_cloudflare_tunnel') }} | Coolify
     </x-slot>
 
     <livewire:server.navbar :server="$server" />
@@ -10,98 +10,96 @@
         <x-server.sidebar :server="$server" activeMenu="cloudflare-tunnel" />
 
         <div class="application-settings-form flex w-full flex-col gap-6">
-            <x-application.settings-section id="server-cloudflare-overview-section" title="Cloudflare Tunnel"
-                helper="Proxy SSH traffic through Cloudflare so the server SSH port can remain closed.">
+            <x-application.settings-section id="server-cloudflare-overview-section" :title="__('server.menu_cloudflare_tunnel')"
+                :helper="__('server.cf_helper')">
                 <x-slot:actions>
-                    <x-status-badge :status="$isCloudflareTunnelsEnabled ? 'Enabled' : 'Disabled'"
+                    <x-status-badge :status="$isCloudflareTunnelsEnabled ? __('server.ld_enabled') : __('server.ld_disabled')"
                         :type="$isCloudflareTunnelsEnabled ? 'success' : 'neutral'" />
                 </x-slot:actions>
 
                 @if ($isCloudflareTunnelsEnabled)
-                    <x-callout type="warning" title="Disabling the tunnel can interrupt server access">
-                        The server IP must be restored to its direct address after disabling the tunnel.
+                    <x-callout type="warning" :title="__('server.cf_disable_warning_title')">
+                        {{ __('server.cf_disable_warning_text') }}
                     </x-callout>
                     <div class="mt-4">
-                        <x-modal-confirmation title="Disable Cloudflare Tunnel?"
-                            buttonTitle="Disable Cloudflare Tunnel" isErrorButton
+                        <x-modal-confirmation :title="__('server.cf_disable_confirm_title')"
+                            :buttonTitle="__('server.cf_disable_button')" isErrorButton
                             submitAction="toggleCloudflareTunnels" :actions="$server->ip_previous
                                 ? [
-                                    'Cloudflare Tunnel will be disabled for this server.',
-                                    'The server IP address will be restored to its previous value.',
+                                    __('server.cf_disable_action_1'),
+                                    __('server.cf_disable_action_restore'),
                                 ]
                                 : [
-                                    'Cloudflare Tunnel will be disabled for this server.',
-                                    'You must manually restore the direct server IP address.',
-                                    'The server may become inaccessible until the IP is corrected.',
+                                    __('server.cf_disable_action_1'),
+                                    __('server.cf_disable_action_manual'),
+                                    __('server.cf_disable_action_unreachable'),
                                 ]"
                             confirmationText="DISABLE CLOUDFLARE TUNNEL"
-                            confirmationLabel="Type the confirmation text to disable Cloudflare Tunnel."
-                            shortConfirmationLabel="Confirmation text" />
+                            :confirmationLabel="__('server.cf_disable_confirm_label')"
+                            :shortConfirmationLabel="__('server.cf_short_label')" />
                     </div>
                 @elseif (!$server->isFunctional())
-                    <x-callout type="info" title="Validate the server for automated setup">
-                        Automated configuration requires a validated server, a Cloudflare token, and an SSH domain.
-                        You can also
+                    <x-callout type="info" :title="__('server.cf_validate_title')">
+                        {{ __('server.cf_validate_text_before') }}
                         <button type="button" wire:click="manualCloudflareConfig" class="font-medium underline">
-                            mark a manual configuration as complete
-                        </button>.
+                            {{ __('server.cf_manual_config_link') }}
+                        </button>{{ __('server.cf_manual_config_after') }}
                     </x-callout>
                 @else
                     <p class="text-sm leading-6 text-neutral-600 dark:text-fg-dim">
-                        Choose automated setup to install and configure cloudflared, or confirm that you already
-                        configured the tunnel manually.
+                        {{ __('server.cf_overview_text') }}
                     </p>
                 @endif
             </x-application.settings-section>
 
             @if (!$isCloudflareTunnelsEnabled && $server->isFunctional())
-                <x-application.settings-section id="server-cloudflare-automated-section" title="Automated setup"
-                    helper="Let Coolify configure the Cloudflare SSH tunnel on this server.">
+                <x-application.settings-section id="server-cloudflare-automated-section" :title="__('server.cf_automated_title')"
+                    :helper="__('server.cf_automated_helper')">
                     <x-slot:actions>
                         <a class="button"
                             href="https://coolify.io/docs/knowledge-base/cloudflare/tunnels/server-ssh"
                             target="_blank">
-                            Documentation
+                            {{ __('server.cf_documentation') }}
                             <x-external-link />
                         </a>
                     </x-slot:actions>
 
                     @cannot('update', $server)
-                        <x-callout type="danger" title="Insufficient permissions">
-                            You do not have permission to configure Cloudflare Tunnel for this server.
+                        <x-callout type="danger" :title="__('server.px_no_permission_title')">
+                            {{ __('server.cf_no_permission_text') }}
                         </x-callout>
                     @else
                         <x-process-dialog @automated.window="processDialogOpen = true" closeWithX size="xl">
-                            <x-slot:title>Cloudflare Tunnel Configuration</x-slot:title>
+                            <x-slot:title>{{ __('server.cf_config_dialog_title') }}</x-slot:title>
                             <x-slot:content>
-                                <livewire:activity-monitor header="Logs" fullHeight />
+                                <livewire:activity-monitor :header="__('server.sub_logs')" fullHeight />
                             </x-slot:content>
                         </x-process-dialog>
                         <form @submit.prevent="$wire.dispatch('automatedCloudflareConfig')">
                             <div class="grid gap-4 lg:grid-cols-2">
-                                <x-forms.input id="cloudflare_token" required label="Cloudflare token"
+                                <x-forms.input id="cloudflare_token" required :label="__('server.cf_token_label')"
                                     type="password" />
-                                <x-forms.input id="ssh_domain" label="SSH domain" required
-                                    helper="Enter the hostname configured in Cloudflare without a protocol." />
+                                <x-forms.input id="ssh_domain" :label="__('server.cf_ssh_domain_label')" required
+                                    :helper="__('server.cf_ssh_domain_helper')" />
                             </div>
                             <div class="mt-4 flex justify-end">
-                                <x-forms.button type="submit" isHighlighted>Configure tunnel</x-forms.button>
+                                <x-forms.button type="submit" isHighlighted>{{ __('server.cf_configure_button') }}</x-forms.button>
                             </div>
                         </form>
                     @endcannot
                 </x-application.settings-section>
 
-                <x-application.settings-section id="server-cloudflare-manual-section" title="Manual setup"
-                    helper="Use this only after cloudflared and the Cloudflare tunnel are already configured.">
+                <x-application.settings-section id="server-cloudflare-manual-section" :title="__('server.cf_manual_title')"
+                    :helper="__('server.cf_manual_helper')">
                     @can('update', $server)
-                        <x-modal-confirmation title="Confirm manual Cloudflare Tunnel configuration"
-                            buttonTitle="I configured the tunnel manually"
+                        <x-modal-confirmation :title="__('server.cf_manual_confirm_title')"
+                            :buttonTitle="__('server.cf_manual_confirm_button')"
                             submitAction="manualCloudflareConfig" :actions="[
-                                'Cloudflare and cloudflared have already been configured.',
-                                'An incomplete setup can make the server unreachable.',
+                                __('server.cf_manual_action_1'),
+                                __('server.cf_manual_action_2'),
                             ]" confirmationText="I manually configured Cloudflare Tunnel"
-                            confirmationLabel="Type the confirmation text to continue."
-                            shortConfirmationLabel="Confirmation text" />
+                            :confirmationLabel="__('server.cf_type_confirm_label')"
+                            :shortConfirmationLabel="__('server.cf_short_label')" />
                     @endcan
                 </x-application.settings-section>
 

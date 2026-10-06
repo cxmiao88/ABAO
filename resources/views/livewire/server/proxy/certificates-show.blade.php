@@ -1,6 +1,6 @@
 <div>
     <x-slot:title>
-        TLS Certificates | Coolify
+        {{ __('server.sub_tls_certificates') }} | Coolify
     </x-slot>
     <livewire:server.navbar :server="$server" />
     <div
@@ -12,10 +12,10 @@
             </div>
         @else
             <div class="application-settings-form w-full">
-                <x-application.settings-section title="TLS certificates"
-                    helper="Review certificates stored by Traefik for this server.">
-                    <x-empty size="sm" :title="$server->isFunctional() ? 'Traefik required' : 'Server validation required'"
-                        :description="$server->isFunctional() ? 'TLS certificate management is available for the Traefik proxy.' : 'Validate this server before viewing its TLS certificates.'"
+                <x-application.settings-section :title="__('server.sub_tls_certificates')"
+                    :helper="__('server.cert_show_helper')">
+                    <x-empty size="sm" :title="$server->isFunctional() ? __('server.cert_traefik_required') : __('server.status_validation_required')"
+                        :description="$server->isFunctional() ? __('server.cert_traefik_only') : __('server.cert_needs_validation')"
                         icon-name="servers" />
                 </x-application.settings-section>
             </div>

@@ -1,9 +1,9 @@
 @php
     $sentinelStatusLabel = match ($sentinelStatus) {
-        'restarting' => 'Restarting',
-        'waiting' => 'Waiting for first report',
-        'in_sync' => 'In sync',
-        default => 'Out of sync',
+        'restarting' => __('server.st_restarting'),
+        'waiting' => __('server.st_waiting'),
+        'in_sync' => __('server.st_in_sync'),
+        default => __('server.st_out_of_sync'),
     };
     $sentinelStatusType = match ($sentinelStatus) {
         'in_sync' => 'success',
@@ -21,108 +21,108 @@
         <x-unsaved-bar action="submit"
             targets="sentinelCustomUrl,sentinelToken" />
 
-        <x-application.settings-section id="server-sentinel-overview-section" title="Sentinel"
-            helper="Monitor server and container health while collecting historical metrics.">
+        <x-application.settings-section id="server-sentinel-overview-section" :title="__('server.menu_sentinel')"
+            :helper="__('server.st_helper')">
             <x-slot:actions>
                 <div class="flex items-center gap-2">
                     <x-status-badge :status="$sentinelStatusLabel" :type="$sentinelStatusType" />
                     <x-forms.button wire:click="restartSentinel" canGate="update"
                         :canResource="$server">
                         <x-reicon name="refresh" class="size-3.5" />
-                        {{ $sentinelStatus === 'in_sync' ? 'Restart' : 'Sync' }}
+                        {{ $sentinelStatus === 'in_sync' ? __('server.st_restart') : __('server.st_sync') }}
                     </x-forms.button>
                 </div>
             </x-slot:actions>
 
             @if ($sentinelStatus === 'out_of_sync')
-                <x-callout type="warning" title="Sentinel is out of sync">
+                <x-callout type="warning" :title="__('server.st_out_of_sync')">
                     <div class="space-y-3">
-                        <p>Sentinel has not reported within the expected interval. Check these items before syncing again:</p>
+                        <p>{{ __('server.st_oos_intro') }}</p>
                         @if ($sentinelPushProblem = $server->sentinelPushProblem())
-                            <p><span class="font-medium">Last error:</span> <code class="break-all">{{ $sentinelPushProblem }}</code></p>
+                            <p><span class="font-medium">{{ __('server.st_last_error') }}:</span> <code class="break-all">{{ $sentinelPushProblem }}</code></p>
                         @endif
                         <ul class="list-disc space-y-1 pl-4">
-                            <li>Confirm that the <code>coolify-sentinel</code> container is running.</li>
+                            <li>{!! __('server.st_oos_check_container') !!}</li>
                             <li>
                                 <a class="font-medium underline underline-offset-2"
                                     href="{{ route('server.sentinel.logs', ['server_uuid' => $server->uuid]) }}"
-                                    wire:navigate>Open Sentinel logs</a>
-                                and review recent connection or push errors.
+                                    wire:navigate>{{ __('server.st_oos_open_logs') }}</a>
+                                {{ __('server.st_oos_review_errors') }}
                             </li>
-                            <li>Confirm that the Coolify URL and Sentinel token match this configuration.</li>
+                            <li>{{ __('server.st_oos_check_config') }}</li>
                         </ul>
 
                         @if ($server->isLocalhost())
-                            <p>Sync Sentinel to recreate it on the Coolify Docker network.</p>
+                            <p>{{ __('server.st_oos_localhost_hint') }}</p>
                         @else
                             <div class="space-y-2">
-                                <p>The remote server needs outbound access to this Coolify URL. Sentinel reporting does not require an inbound listening port.</p>
+                                <p>{{ __('server.st_oos_outbound_hint') }}</p>
                                 @if (filled($sentinelCustomUrl))
                                     <p>
-                                        From the remote server, test
+                                        {{ __('server.st_oos_test_prefix') }}
                                         <code class="break-all">curl -fsS {{ escapeshellarg(rtrim($sentinelCustomUrl, '/') . '/api/health') }}</code>.
                                     </p>
                                 @else
-                                    <p>Set a reachable Coolify URL before syncing Sentinel.</p>
+                                    <p>{{ __('server.st_oos_set_url_first') }}</p>
                                 @endif
-                                <p>Check DNS, TLS certificates, outbound firewall rules, and proxy settings.</p>
+                                <p>{{ __('server.st_oos_check_network') }}</p>
                             </div>
                         @endif
                     </div>
                 </x-callout>
             @elseif ($sentinelStatus === 'in_sync')
                 <p class="text-sm text-neutral-500 dark:text-fg-dim">
-                    Sentinel is connected and reporting server health to this Coolify instance.
+                    {{ __('server.st_in_sync_text') }}
                 </p>
             @elseif ($sentinelStatus === 'restarting')
-                <p class="text-sm text-neutral-500 dark:text-fg-dim">Sentinel is restarting.</p>
+                <p class="text-sm text-neutral-500 dark:text-fg-dim">{{ __('server.st_restarting_text') }}</p>
             @else
-                <p class="text-sm text-neutral-500 dark:text-fg-dim">Sentinel started and is waiting for its first authenticated report.</p>
+                <p class="text-sm text-neutral-500 dark:text-fg-dim">{{ __('server.st_waiting_text') }}</p>
             @endif
         </x-application.settings-section>
 
         @if ($server->isSentinelEnabled())
-            <x-application.settings-section id="server-sentinel-connection-section" title="Connection"
-                helper="Configure how Sentinel authenticates with and reports to Coolify.">
+            <x-application.settings-section id="server-sentinel-connection-section" :title="__('server.connection_title')"
+                :helper="__('server.st_connection_helper')">
                 <x-slot:actions>
                     <div class="flex items-center gap-2">
                         @can('manageSentinel', $server)
-                            <x-modal-confirmation title="Restore default Sentinel configuration?"
-                                buttonTitle="Restore defaults" submitAction="restoreDefaultConfiguration"
+                            <x-modal-confirmation :title="__('server.st_restore_title')"
+                                :buttonTitle="__('server.st_restore_button')" submitAction="restoreDefaultConfiguration"
                                 :actions="[
-                                    'Restore the generated Coolify URL and default collection settings.',
-                                    'Clear debug logging and the development image override.',
-                                    'The Sentinel token and metrics setting will be preserved.',
-                                    'Restart Sentinel to apply the restored configuration.',
-                                ]" warningMessage="Your custom Sentinel configuration will be replaced with Coolify defaults."
+                                    __('server.st_restore_action_1'),
+                                    __('server.st_restore_action_2'),
+                                    __('server.st_restore_action_3'),
+                                    __('server.st_restore_action_4'),
+                                ]" :warningMessage="__('server.st_restore_warning')"
                                 :confirmWithText="false" :confirmWithPassword="false"
-                                step2ButtonText="Restore defaults" />
+                                :step2ButtonText="__('server.st_restore_button')" />
                         @endcan
                         <x-forms.button canGate="update" :canResource="$server"
                             wire:click="regenerateSentinelToken">
-                            Regenerate token
+                            {{ __('server.st_regenerate_token') }}
                         </x-forms.button>
                     </div>
                 </x-slot:actions>
                 <div class="grid gap-4 lg:grid-cols-2">
                     <x-forms.input canGate="update" :canResource="$server" id="sentinelCustomUrl"
-                        required label="Coolify URL"
-                        helper="Public URL used by Sentinel to reach this Coolify instance." />
+                        required :label="__('server.st_coolify_url_label')"
+                        :helper="__('server.st_coolify_url_helper')" />
                     <x-forms.input canGate="update" :canResource="$server" type="password"
-                        id="sentinelToken" label="Sentinel token" required
-                        helper="Authentication token used by Sentinel." />
+                        id="sentinelToken" :label="__('server.st_token_label')" required
+                        :helper="__('server.st_token_helper')" />
                 </div>
             </x-application.settings-section>
 
             @if (isDev())
                 <x-application.settings-section id="server-sentinel-development-section"
-                    title="Development overrides"
-                    helper="Local testing controls that are unavailable in production.">
+                    :title="__('server.st_dev_title')"
+                    :helper="__('server.st_dev_helper')">
                     <div class="grid gap-4 lg:grid-cols-2">
-                        <x-forms.listbox id="isSentinelDebugEnabled" label="Debug logging"
+                        <x-forms.listbox id="isSentinelDebugEnabled" :label="__('server.st_debug_label')"
                             onChange="instantSave" :options="[
-                                ['value' => false, 'label' => 'Standard logging'],
-                                ['value' => true, 'label' => 'Enable debug logging'],
+                                ['value' => false, 'label' => __('server.st_debug_standard')],
+                                ['value' => true, 'label' => __('server.st_debug_enabled')],
                             ]" />
                         <div x-data="{
                             customImage: localStorage.getItem('sentinel_custom_docker_image_{{ $server->uuid }}') || '',
@@ -140,12 +140,12 @@
                             <div class="flex items-end gap-2">
                                 <div class="min-w-0 flex-1">
                                     <x-forms.input canGate="update" :canResource="$server" x-model="customImage"
-                                        placeholder="sentinel:latest" label="Custom Docker image"
-                                        helper="Leave empty to use the default Sentinel image." />
+                                        placeholder="sentinel:latest" :label="__('server.st_custom_image_label')"
+                                        :helper="__('server.st_custom_image_helper')" />
                                 </div>
                                 <x-forms.button canGate="update" :canResource="$server"
                                     x-on:click="applyCustomImage()">
-                                    Apply and restart
+                                    {{ __('server.st_apply_and_restart') }}
                                 </x-forms.button>
                             </div>
                         </div>
