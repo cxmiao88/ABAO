@@ -12,6 +12,11 @@ services:
       - /data/coolify/services:/var/www/html/storage/app/services
       - /data/coolify/backups:/var/www/html/storage/app/backups
       - /data/coolify/images:/var/www/html/storage/app/images
+      # 持久化中文语言设置：覆盖容器内的 config/app.php（locale 已改为 zh-cn）
+      - type: bind
+        source: /data/coolify/source/config-overrides/app.php
+        target: /var/www/html/config/app.php
+        read_only: true
     environment:
       - APP_ENV=${APP_ENV:-production}
       - PHP_MEMORY_LIMIT=${PHP_MEMORY_LIMIT:-256M}

@@ -136,7 +136,7 @@
                     <span class="menu-item-label" :class="collapsed && 'lg:hidden'">{{ __('nav.destinations') }}</span>
                 </a>
             </li>
-            @if (auth()->user()?->isAdmin())
+            @if (auth()->user()?->isAdmin() && Route::has('registries.index'))
                 <li>
                     <a title="{{ __('nav.registries') }}" {{ wireNavigate() }}
                         class="{{ request()->is('registries*') ? 'menu-item-active menu-item' : 'menu-item' }}"

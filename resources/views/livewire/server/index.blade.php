@@ -1,17 +1,17 @@
 <div class="application-settings-form w-full">
     <x-slot:title>
-        Servers | Coolify
+        {{ __('server.list_title') }} | Coolify
     </x-slot>
 
     <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 class="min-w-0 text-[24px]! leading-7! font-semibold! tracking-tight!">Servers</h1>
+        <h1 class="min-w-0 text-[24px]! leading-7! font-semibold! tracking-tight!">{{ __('server.list_title') }}</h1>
         <div class="flex flex-wrap items-center gap-2">
             @if (isDev())
                 @can('create', App\Models\Server::class)
                     <a href="{{ route('server.transfer.import') }}" {{ wireNavigate() }}
                         class="button w-fit shrink-0 whitespace-nowrap">
                         <x-reicon name="upload" class="size-3.5" />
-                        Import server
+                        {{ __('server.import_server') }}
                         <x-status-badge label="Dev" />
                     </a>
                 @endcan
@@ -20,7 +20,7 @@
                 <a href="{{ route('server.create') }}" {{ wireNavigate() }}
                     class="button w-fit shrink-0 whitespace-nowrap button-highlighted">
                     <x-reicon name="plus" class="size-3.5" />
-                    New server
+                    {{ __('server.new_server') }}
                 </a>
             @endcan
         </div>
@@ -38,12 +38,12 @@
             $sentinelNeedsAttention = $isReady && $server->isSentinelEnabled() && $server->sentinelStatus() === 'out_of_sync';
 
             $status = match (true) {
-                $isTransferredAway && $server->isManagementDisabled() => 'Transferable',
-                $isTransferredAway => 'Transferred away',
-                $server->settings->force_disabled => 'Disabled',
-                $proxyNeedsAttention || $sentinelNeedsAttention => 'Attention required',
-                $isReady => 'Ready',
-                default => 'Validation required',
+                $isTransferredAway && $server->isManagementDisabled() => __('server.status_transferable'),
+                $isTransferredAway => __('server.status_transferred_away'),
+                $server->settings->force_disabled => __('server.status_disabled'),
+                $proxyNeedsAttention || $sentinelNeedsAttention => __('server.status_attention_required'),
+                $isReady => __('server.status_ready'),
+                default => __('server.status_validation_required'),
             };
 
             $statusType = match (true) {
@@ -83,19 +83,19 @@
         }
     }">
         @if ($servers->isEmpty())
-            <x-empty title="No servers yet"
-                description="Add a server to deploy applications, databases, and services."
+            <x-empty :title="__('server.empty_title')"
+                :description="__('server.empty_description')"
                 icon-name="servers" />
         @else
             <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div class="relative w-full sm:max-w-sm">
                     <x-reicon name="search"
                         class="pointer-events-none absolute top-1/2 left-2.5 z-10 size-3.5 -translate-y-1/2 text-neutral-400 dark:text-fg-faint" />
-                    <input x-model.debounce.150ms="search" type="search" placeholder="Search servers"
+                    <input x-model.debounce.150ms="search" type="search" placeholder="{{ __('server.search_servers') }}"
                         class="h-8! w-full rounded-lg! border-neutral-200! bg-white! py-0! pr-8! pl-8! text-[12px]! shadow-none! placeholder:text-neutral-400 focus:border-accent! focus:ring-0! dark:border-white/[0.08]! dark:bg-white/[0.035]! dark:text-fg! dark:placeholder:text-fg-faint">
                     <button x-cloak x-show="search" x-on:click="search = ''" type="button"
                         class="absolute top-1/2 right-2 flex size-5 -translate-y-1/2 items-center justify-center rounded text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-black dark:text-fg-faint dark:hover:bg-white/[0.07] dark:hover:text-fg"
-                        aria-label="Clear search">
+                        aria-label="{{ __('server.clear_search') }}">
                         <x-reicon name="x" class="size-3" />
                     </button>
                 </div>
@@ -103,7 +103,7 @@
                 <div class="flex items-center gap-3">
                     <span class="text-[11px] text-neutral-500 dark:text-fg-faint">
                         <span x-text="filteredServers.length"></span>
-                        <span x-text="filteredServers.length === 1 ? 'server' : 'servers'"></span>
+                        <span x-text="filteredServers.length === 1 ? '{{ __('server.unit_server') }}' : '{{ __('server.unit_servers') }}'"></span>
                     </span>
                     <div
                         class="view-toggle">
@@ -112,7 +112,7 @@
                             :class="viewMode === 'table'
                                 ? 'control-selected'
                                 : 'text-neutral-400 hover:bg-neutral-100 hover:text-black dark:text-fg-faint dark:hover:bg-white/[0.06] dark:hover:text-fg'"
-                            aria-label="Table view">
+                            aria-label="{{ __('server.table_view') }}">
                             <x-reicon name="unordered-list" class="size-3.5" />
                         </button>
                         <button type="button" x-on:click="setViewMode('grid')"
@@ -120,7 +120,7 @@
                             :class="viewMode === 'grid'
                                 ? 'control-selected'
                                 : 'text-neutral-400 hover:bg-neutral-100 hover:text-black dark:text-fg-faint dark:hover:bg-white/[0.06] dark:hover:text-fg'"
-                            aria-label="Grid view">
+                            aria-label="{{ __('server.grid_view') }}">
                             <x-reicon name="grid" class="size-3.5" />
                         </button>
                     </div>
@@ -157,7 +157,7 @@
                             </div>
                             @if ($serverRow['statusType'] !== 'success')
                                 <span data-tooltip="{{ $serverRow['status'] }}"
-                                    aria-label="Server status: {{ $serverRow['status'] }}"
+                                    aria-label="{{ __('server.server_status_prefix') }}{{ $serverRow['status'] }}"
                                     @class([
                                         'ml-auto flex size-6 shrink-0 items-center justify-center rounded-md',
                                         'text-orange-500 dark:text-warning' => $serverRow['statusType'] === 'warning',
@@ -175,9 +175,9 @@
                 class="overflow-x-auto rounded-xl border border-neutral-200 bg-white shadow-sm dark:border-white/[0.08] dark:bg-white/[0.05]">
                 <div
                     class="grid min-w-[480px] grid-cols-[minmax(0,1fr)_9.5rem] border-b border-neutral-200 bg-neutral-50 px-4 py-2.5 text-[11px] font-medium text-neutral-500 md:min-w-[560px] md:grid-cols-[minmax(0,1fr)_6rem_9.5rem] dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-fg-faint">
-                    <div>Server</div>
-                    <div class="hidden md:block">Resources</div>
-                    <div>Status</div>
+                    <div>{{ __('server.col_server') }}</div>
+                    <div class="hidden md:block">{{ __('server.menu_resources') }}</div>
+                    <div>{{ __('server.col_status') }}</div>
                 </div>
                 <template x-for="server in filteredServers" :key="server.uuid">
                     <a :href="server.href" {{ wireNavigate() }}
@@ -194,14 +194,14 @@
                                     x-text="server.description"></p>
                             </div>
                             <span x-show="server.statusType !== 'success'" :data-tooltip="server.status"
-                                :aria-label="`Server status: ${server.status}`"
+                                :aria-label="`{{ __('server.server_status_prefix') }}${server.status}`"
                                 class="ml-auto flex size-6 shrink-0 items-center justify-center rounded-md md:hidden"
                                 :class="server.statusType === 'warning' ? 'text-orange-500 dark:text-warning' : 'text-red-500 dark:text-red-400'">
                                 <x-reicon name="alert-triangle" class="size-4" />
                             </span>
                         </div>
                         <div class="hidden text-[12px] font-medium text-neutral-600 md:block dark:text-fg-dim">
-                            <span class="inline-flex items-center gap-1" :title="`${server.resourceCount} ${server.resourceCount === 1 ? 'resource' : 'resources'}`">
+                            <span class="inline-flex items-center gap-1" :title="`${server.resourceCount} ${server.resourceCount === 1 ? '{{ __('server.unit_resource') }}' : '{{ __('server.unit_resources') }}'}`">
                                 <x-reicon name="grid" class="size-3.5 text-neutral-400 dark:text-fg-faint" />
                                 <span x-text="server.resourceCount"></span>
                             </span>
@@ -221,8 +221,8 @@
             <div x-show="filteredServers.length === 0"
                 class="flex min-h-52 flex-col items-center justify-center rounded-xl border border-neutral-200 bg-white px-6 text-center dark:border-white/[0.08] dark:bg-white/[0.05]">
                 <x-reicon name="search" class="mb-3 size-6 text-neutral-300 dark:text-fg-faint" />
-                <p class="text-[13px] font-medium">No matching servers</p>
-                <p class="mt-1 text-[12px] text-neutral-500 dark:text-fg-dim">Try a different search.</p>
+                <p class="text-[13px] font-medium">{{ __('server.no_matching_servers') }}</p>
+                <p class="mt-1 text-[12px] text-neutral-500 dark:text-fg-dim">{{ __('server.try_different_search') }}</p>
             </div>
         @endif
 

@@ -115,7 +115,7 @@
             ['label' => 'Servers', 'href' => url('/servers')],
             ['label' => 'Sources', 'href' => route('source.all')],
             ['label' => 'Destinations', 'href' => route('destination.index')],
-            auth()->user()?->isAdmin()
+            auth()->user()?->isAdmin() && Route::has('registries.index')
                 ? ['label' => 'Registries', 'href' => route('registries.index')]
                 : null,
             ['label' => 'S3 Storage', 'href' => route('storage.index')],

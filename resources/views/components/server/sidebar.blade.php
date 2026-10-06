@@ -14,195 +14,195 @@
     );
     $serverMenuItems = [
         [
-            'label' => 'General',
+            'label' => __('server.menu_general'),
             'route' => 'server.show',
             'active' => $activeMenu === 'general',
             'icon' => 'settings',
-            'group' => 'Settings',
+            'group' => __('server.group_settings'),
         ],
         [
-            'label' => 'Advanced',
+            'label' => __('server.menu_advanced'),
             'route' => 'server.advanced',
             'active' => $activeMenu === 'advanced',
             'icon' => 'grid',
-            'group' => 'Settings',
+            'group' => __('server.group_settings'),
             'visible' => $server->isFunctional(),
         ],
         [
-            'label' => 'Private Key',
+            'label' => __('server.menu_private_key'),
             'route' => 'server.private-key',
             'active' => $activeMenu === 'private-key',
             'icon' => 'keys',
-            'group' => 'Settings',
+            'group' => __('server.group_settings'),
         ],
         [
-            'label' => 'Cloud Token',
+            'label' => __('server.menu_cloud_token'),
             'route' => 'server.cloud-provider-token',
             'active' => $activeMenu === 'cloud-provider-token',
             'icon' => 'subscription',
-            'group' => 'Settings',
+            'group' => __('server.group_settings'),
             'visible' => (bool) ($server->hetzner_server_id || $server->vultr_instance_id),
         ],
         [
-            'label' => 'CA Certificate',
+            'label' => __('server.menu_ca_certificate'),
             'route' => 'server.ca-certificate',
             'active' => $activeMenu === 'ca-certificate',
             'icon' => 'file',
-            'group' => 'Settings',
+            'group' => __('server.group_settings'),
         ],
         [
-            'label' => 'Cloudflare Tunnel',
+            'label' => __('server.menu_cloudflare_tunnel'),
             'route' => 'server.cloudflare-tunnel',
             'active' => $activeMenu === 'cloudflare-tunnel',
             'icon' => 'globe',
-            'group' => 'Networking',
+            'group' => __('server.group_networking'),
             'visible' => ! $server->isLocalhost(),
         ],
         [
-            'label' => 'Proxy',
+            'label' => __('server.menu_proxy'),
             'route' => 'server.proxy',
             'active' => $activeMenu === 'proxy',
             'icon' => 'network',
-            'group' => 'Platform',
+            'group' => __('server.group_platform'),
             'visible' => ! $server->isSwarmWorker() && $server->canHostResources(),
             'warning' => $server->hasCurrentTraefikOutdatedInfo(),
             'tracks_proxy_configuration' => true,
             'children' => [
-                ['label' => 'Configuration', 'route' => 'server.proxy', 'active' => $activeSubMenu === 'configuration', 'icon' => 'settings'],
-                ['label' => 'Dynamic Configurations', 'route' => 'server.proxy.dynamic-confs', 'active' => $activeSubMenu === 'dynamic-confs', 'icon' => 'sliders', 'visible' => $server->proxySet()],
-                ['label' => 'TLS Certificates', 'route' => 'server.proxy.certificates', 'active' => $activeSubMenu === 'certificates', 'icon' => 'shield-star', 'visible' => $server->proxyType() === \App\Enums\ProxyTypes::TRAEFIK->value],
-                ['label' => 'Logs', 'route' => 'server.proxy.logs', 'active' => $activeSubMenu === 'logs', 'icon' => 'file-content', 'visible' => $server->proxySet(), 'navigate' => false],
+                ['label' => __('server.sub_configuration'), 'route' => 'server.proxy', 'active' => $activeSubMenu === 'configuration', 'icon' => 'settings'],
+                ['label' => __('server.sub_dynamic_configurations'), 'route' => 'server.proxy.dynamic-confs', 'active' => $activeSubMenu === 'dynamic-confs', 'icon' => 'sliders', 'visible' => $server->proxySet()],
+                ['label' => __('server.sub_tls_certificates'), 'route' => 'server.proxy.certificates', 'active' => $activeSubMenu === 'certificates', 'icon' => 'shield-star', 'visible' => $server->proxyType() === \App\Enums\ProxyTypes::TRAEFIK->value],
+                ['label' => __('server.sub_logs'), 'route' => 'server.proxy.logs', 'active' => $activeSubMenu === 'logs', 'icon' => 'file-content', 'visible' => $server->proxySet(), 'navigate' => false],
             ],
         ],
         [
-            'label' => 'Sentinel',
+            'label' => __('server.menu_sentinel'),
             'route' => 'server.sentinel',
             'active' => request()->routeIs('server.sentinel', 'server.sentinel.*'),
             'icon' => 'shield-star',
-            'group' => 'Platform',
+            'group' => __('server.group_platform'),
             'visible' => $server->isFunctional() && ! $server->isSwarm() && $server->canHostResources() && auth()->user()?->can('viewSentinel', $server),
             'warning' => $server->isSentinelEnabled() && $sentinelStatus === 'out_of_sync',
             'tracks_sentinel_status' => true,
             'children' => [
-                ['label' => 'Configuration', 'route' => 'server.sentinel', 'active' => request()->routeIs('server.sentinel'), 'icon' => 'settings'],
-                ['label' => 'Logs', 'route' => 'server.sentinel.logs', 'active' => request()->routeIs('server.sentinel.logs'), 'icon' => 'file-content'],
+                ['label' => __('server.sub_configuration'), 'route' => 'server.sentinel', 'active' => request()->routeIs('server.sentinel'), 'icon' => 'settings'],
+                ['label' => __('server.sub_logs'), 'route' => 'server.sentinel.logs', 'active' => request()->routeIs('server.sentinel.logs'), 'icon' => 'file-content'],
             ],
         ],
         [
-            'label' => 'Resources',
+            'label' => __('server.menu_resources'),
             'route' => 'server.resources',
             'active' => $activeMenu === 'resources',
             'icon' => 'projects',
-            'group' => 'Platform',
+            'group' => __('server.group_platform'),
         ],
         [
-            'label' => 'Terminal',
+            'label' => __('server.menu_terminal'),
             'route' => 'server.command',
             'active' => $activeMenu === 'terminal',
             'icon' => 'browser-terminal',
-            'group' => 'Operations',
+            'group' => __('server.group_operations'),
             'navigate' => false,
             'visible' => auth()->user()?->can('canAccessTerminal'),
         ],
         [
-            'label' => 'Destinations',
+            'label' => __('server.menu_destinations'),
             'route' => 'server.destinations',
             'active' => $activeMenu === 'destinations',
             'icon' => 'destinations',
-            'group' => 'Networking',
+            'group' => __('server.group_networking'),
             'visible' => $server->isFunctional(),
         ],
         [
-            'label' => 'Swarm',
+            'label' => __('server.menu_swarm'),
             'route' => 'server.swarm',
             'active' => $activeMenu === 'swarm',
             'icon' => 'layers',
-            'group' => 'Networking',
+            'group' => __('server.group_networking'),
             'visible' => $server->team->usesSwarm() && ! $server->isBuildServer() && ! $server->settings->is_cloudflare_tunnel,
         ],
         [
-            'label' => 'Images',
+            'label' => __('server.menu_images'),
             'route' => 'server.docker-images',
             'active' => $activeMenu === 'docker-images',
             'icon' => 'layers',
-            'group' => 'Operations',
+            'group' => __('server.group_operations'),
             'visible' => $server->isFunctional(),
         ],
         [
-            'label' => 'Docker Cleanup',
+            'label' => __('server.menu_docker_cleanup'),
             'route' => 'server.docker-cleanup',
             'active' => $activeMenu === 'docker-cleanup',
             'icon' => 'broom',
-            'group' => 'Operations',
+            'group' => __('server.group_operations'),
             'visible' => $server->isFunctional(),
         ],
         [
-            'label' => 'GitHub Runners',
+            'label' => __('server.menu_github_runners'),
             'route' => 'server.github-runners',
             'active' => $activeMenu === 'github-runners',
             'icon' => 'play-circle',
-            'group' => 'Operations',
+            'group' => __('server.group_operations'),
             'visible' => ! $server->isLocalhost(),
             'beta' => true,
         ],
         [
-            'label' => 'Registries',
+            'label' => __('server.menu_registries'),
             'route' => 'server.registries',
             'active' => $activeMenu === 'registries',
             'icon' => 'layers',
-            'group' => 'Operations',
+            'group' => __('server.group_operations'),
             'visible' => auth()->user()?->can('update', $server),
         ],
         [
-            'label' => 'Log Drains',
+            'label' => __('server.menu_log_drains'),
             'route' => 'server.log-drains',
             'active' => $activeMenu === 'log-drains',
             'icon' => 'notifications',
-            'group' => 'Operations',
+            'group' => __('server.group_operations'),
             'visible' => $server->isFunctional(),
         ],
         [
-            'label' => 'Metrics',
+            'label' => __('server.menu_metrics'),
             'route' => 'server.metrics',
             'active' => $activeMenu === 'metrics',
             'icon' => 'graph',
-            'group' => 'Operations',
+            'group' => __('server.group_operations'),
             'visible' => $server->isFunctional(),
         ],
         [
-            'label' => 'Analytics',
+            'label' => __('server.menu_analytics'),
             'route' => 'server.analytics',
             'active' => $activeMenu === 'analytics',
             'icon' => 'analytics',
-            'group' => 'Operations',
+            'group' => __('server.group_operations'),
             'visible' => $server->isFunctional() && ! $server->isSwarm() && ! $server->isBuildServer(),
         ],
         [
-            'label' => 'Security',
+            'label' => __('server.menu_security'),
             'route' => 'server.security.patches',
             'active' => request()->routeIs('server.security.*'),
             'icon' => 'shield-alert',
-            'group' => 'Security',
+            'group' => __('server.group_security'),
             'visible' => auth()->user()?->can('update', $server),
             'children' => [
-                ['label' => 'Server Patching', 'route' => 'server.security.patches', 'active' => request()->routeIs('server.security.patches'), 'icon' => 'bandage'],
-                ['label' => 'Terminal Access', 'route' => 'server.security.terminal-access', 'active' => request()->routeIs('server.security.terminal-access'), 'icon' => 'browser-terminal', 'navigate' => false],
+                ['label' => __('server.sub_server_patching'), 'route' => 'server.security.patches', 'active' => request()->routeIs('server.security.patches'), 'icon' => 'bandage'],
+                ['label' => __('server.sub_terminal_access'), 'route' => 'server.security.terminal-access', 'active' => request()->routeIs('server.security.terminal-access'), 'icon' => 'browser-terminal', 'navigate' => false],
             ],
         ],
         [
-            'label' => 'Transfer',
+            'label' => __('server.menu_transfer'),
             'route' => 'server.transfer',
             'active' => $activeMenu === 'transfer',
             'icon' => 'arrow-right',
-            'group' => 'Operations',
+            'group' => __('server.group_operations'),
             'visible' => isDev() && ! $server->isLocalhost() && auth()->user()?->can('view', $server),
         ],
         [
-            'label' => 'Danger',
+            'label' => __('server.menu_danger'),
             'route' => 'server.delete',
             'active' => $activeMenu === 'danger',
             'icon' => 'shield-alert',
-            'group' => 'Danger zone',
+            'group' => __('server.group_danger_zone'),
             // Coolify host (id 0) cannot be deleted. Other servers may still use
             // host.docker.internal (e.g. Lima VMs) and must keep the Danger menu.
             'visible' => ! $server->is_coolify_host,
@@ -246,7 +246,7 @@
         sentinelOutOfSync = $event.detail.outOfSync;
         scheduleSentinelExpiry($event.detail.expiresInMilliseconds);
     ">
-    <nav aria-label="Server configuration sections"
+    <nav aria-label="{{ __('server.sidebar_aria') }}"
         x-data="settingsSidebarAccordion({ activeGroup: @js($activeGroup), storageKey: 'coolify.settings-sidebar.server' })"
         class="grid grid-cols-2 gap-0.5 border-y border-neutral-200 py-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-1 xl:border-y-0 xl:py-0 dark:border-white/[0.06]">
         @foreach ($groupedServerMenuItems as $groupLabel => $groupItems)
@@ -265,7 +265,7 @@
             </button>
             <div class="contents" :class="isOpen(@js($groupLabel)) ? 'xl:block' : 'xl:hidden'">
             @foreach ($groupItems as $menuItem)
-                <a wire:key="server-settings-link-{{ str($menuItem['label'])->slug() }}"
+                <a wire:key="server-settings-link-{{ $menuItem['route'] }}"
                     @class([
                         'menu-item',
                         'menu-item-active' => $menuItem['active'],
@@ -291,7 +291,7 @@
                 @if ($menuItem['active'] && isset($menuItem['children']))
                     <div class="col-span-full grid grid-cols-2 gap-0.5 border-l border-neutral-200 pl-2 sm:grid-cols-3 xl:grid-cols-1 dark:border-white/[0.08]">
                         @foreach (collect($menuItem['children'])->filter(fn (array $child): bool => $child['visible'] ?? true) as $child)
-                            <a wire:key="server-settings-child-{{ str($menuItem['label'].'-'.$child['label'])->slug() }}"
+                            <a wire:key="server-settings-child-{{ $child['route'] }}"
                                 @class(['menu-item', 'menu-item-active' => $child['active']])
                                 @if ($child['navigate'] ?? true) {{ wireNavigate() }} @endif
                                 href="{{ route($child['route'], $serverRouteParameters) }}">
