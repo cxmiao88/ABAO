@@ -1,6 +1,6 @@
 <div>
     <x-slot:title>
-        {{ data_get_str($environment, 'name')->limit(10) }} > Resources | Coolify
+        {{ data_get_str($environment, 'name')->limit(10) }} > {{ __('project.resources') }} | Coolify
     </x-slot>
     <div x-data="resourceIndex()" class="w-full">
         <header class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -15,19 +15,19 @@
                 <a href="{{ route('shared-variables.environment.show', ['project_uuid' => $project->uuid, 'environment_uuid' => $environment->uuid]) }}"
                     {{ wireNavigate() }}
                     class="button whitespace-nowrap"
-                    title="Shared variables for this environment"
-                    aria-label="Shared variables for {{ $environment->name }}">
+                    title="{{ __('project.shared_variables_for_environment') }}"
+                    aria-label="{{ __('project.shared_variables_for', ['environment' => $environment->name]) }}">
                     <x-reicon name="variables" class="size-3.5" />
-                    Shared variables
+                    {{ __('nav.shared_variables') }}
                 </a>
                 @can('update', $project)
                     <a href="{{ route('project.environment.edit', ['project_uuid' => $project->uuid, 'environment_uuid' => $environment->uuid]) }}"
                         {{ wireNavigate() }}
                         class="button whitespace-nowrap"
-                        title="Environment settings"
-                        aria-label="Open settings for {{ $environment->name }}">
+                        title="{{ __('project.environment_settings') }}"
+                        aria-label="{{ __('project.open_settings_for') }} {{ $environment->name }}">
                         <x-reicon name="settings" class="size-3.5" />
-                        Settings
+                        {{ __('project.settings_button') }}
                     </a>
                 @endcan
                 @can('createAnyResource')
@@ -35,7 +35,7 @@
                         {{ wireNavigate() }}
                         class="button whitespace-nowrap button-highlighted">
                         <x-reicon name="plus" class="size-3.5" />
-                        New resource
+                        {{ __('project.new_resource') }}
                     </a>
                 @endcan
             </div>
@@ -43,20 +43,20 @@
 
         @if ($environment->isEmpty())
             @can('createAnyResource')
-                <x-empty title="No resources yet"
-                    description="Add an application, database, or service to this environment."
+                <x-empty title="{{ __('project.no_resources') }}"
+                    description="{{ __('project.no_resources_description') }}"
                     icon-name="layers">
                     <x-slot:contents>
                         <a href="{{ route('project.resource.create', ['project_uuid' => $project->uuid, 'environment_uuid' => $environment->uuid]) }}"
                             {{ wireNavigate() }} class="button">
                             <x-reicon name="plus" class="size-3.5" />
-                            Add resource
+                            {{ __('project.add_resource') }}
                         </a>
                     </x-slot:contents>
                 </x-empty>
             @else
-                <x-empty title="No resources yet"
-                    description="Add an application, database, or service to this environment."
+                <x-empty title="{{ __('project.no_resources') }}"
+                    description="{{ __('project.no_resources_description') }}"
                     icon-name="layers" />
             @endcan
         @else
@@ -65,11 +65,11 @@
                     <x-reicon name="search"
                         class="pointer-events-none absolute top-1/2 left-2.5 z-10 size-3.5 -translate-y-1/2 text-neutral-400 dark:text-fg-faint" />
                     <input x-model.debounce.150ms="search" x-on:input="page = 1" type="search"
-                        placeholder="Search resources"
+                        placeholder="{{ __('project.search_resources') }}"
                         class="h-8! w-full rounded-lg! border-neutral-200! bg-white! py-0! pr-8! pl-8! text-[12px]! shadow-none! placeholder:text-neutral-400 focus:border-accent! focus:ring-0! dark:border-white/[0.08]! dark:bg-white/[0.035]! dark:text-fg! dark:placeholder:text-fg-faint">
                     <button x-cloak x-show="search" x-on:click="search = ''; page = 1" type="button"
                         class="absolute top-1/2 right-2 flex size-5 -translate-y-1/2 items-center justify-center rounded text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-black dark:text-fg-faint dark:hover:bg-white/[0.07] dark:hover:text-fg"
-                        aria-label="Clear search">
+                        aria-label="{{ __('project.clear_search') }}">
                         <span class="text-sm leading-none">×</span>
                     </button>
                 </div>
@@ -79,13 +79,13 @@
                         <x-slot:trigger>
                             <button type="button" class="button max-w-64"
                                 :class="activeFilterCount > 0 && 'button-highlighted'"
-                                :title="activeFilterCount > 0 ? filterButtonText : 'Filter'"
+                                :title="activeFilterCount > 0 ? filterButtonText : '{{ __('resource.filter') }}'"
                                 aria-haspopup="listbox" :aria-expanded="open">
                             <svg class="size-3.5 opacity-65" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                                 <path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" stroke-width="1.7"
                                     stroke-linecap="round" />
                             </svg>
-                            <span class="truncate" x-text="activeFilterCount > 0 ? filterButtonText : 'Filter'"></span>
+                            <span class="truncate" x-text="activeFilterCount > 0 ? filterButtonText : '{{ __('resource.filter') }}'"></span>
                             <span x-show="activeFilterCount > 0"
                                 class="shrink-0 rounded-full bg-neutral-100 px-1.5 py-0.5 text-[10px] font-medium text-neutral-500 dark:bg-white/[0.07] dark:text-fg-dim"
                                 x-text="activeFilterCount"></span>
@@ -119,7 +119,7 @@
                             <div class="border-t border-neutral-200 bg-white p-1 dark:border-white/10 dark:bg-raised">
                                 <button type="button" class="listbox-option justify-center! text-center!"
                                     x-on:click="clearFilters()">
-                                    Clear filters
+                                    {{ __('resource.clear_filters') }}
                                 </button>
                             </div>
                     </x-table.dropdown>
@@ -132,7 +132,7 @@
                                     stroke="currentColor" stroke-width="1.7" stroke-linecap="round"
                                     stroke-linejoin="round" />
                             </svg>
-                            Sort
+                            {{ __('project.sort') }}
                             </button>
                         </x-slot:trigger>
                             <template x-for="option in sortOptions" :key="option.value">
@@ -157,7 +157,7 @@
                                 ?
                                 'control-selected' :
                                 'text-neutral-400 hover:bg-neutral-100 hover:text-black dark:text-fg-faint dark:hover:bg-white/[0.06] dark:hover:text-fg'"
-                            aria-label="Table view" title="Table view">
+                            aria-label="{{ __('project.table_view') }}" title="{{ __('project.table_view') }}">
                             <x-reicon name="unordered-list" class="size-3.5" />
                         </button>
                         <button type="button" x-on:click="setViewMode('grid')"
@@ -166,7 +166,7 @@
                                 ?
                                 'control-selected' :
                                 'text-neutral-400 hover:bg-neutral-100 hover:text-black dark:text-fg-faint dark:hover:bg-white/[0.06] dark:hover:text-fg'"
-                            aria-label="Grid view" title="Grid view">
+                            aria-label="{{ __('project.grid_view') }}" title="{{ __('project.grid_view') }}">
                             <x-reicon name="grid" class="size-3.5" />
                         </button>
                     </div>
@@ -177,12 +177,12 @@
                 class="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm dark:border-white/[0.08] dark:bg-white/[0.05]">
                 <div
                     class="environment-resource-grid border-b border-neutral-200 bg-neutral-50 px-4 py-2.5 text-[11px] font-medium text-neutral-500 dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-fg-faint">
-                    <div>Resource</div>
-                    <div class="resource-type">Type</div>
-                    <div>Status</div>
-                    <div class="resource-domain">Domain</div>
-                    <div class="resource-server">Server</div>
-                    <div class="resource-tags">Tags</div>
+                    <div>{{ __('project.resource_label') }}</div>
+                    <div class="resource-type">{{ __('project.type_label') }}</div>
+                    <div>{{ __('deployment.status') }}</div>
+                    <div class="resource-domain">{{ __('project.domain_label') }}</div>
+                    <div class="resource-server">{{ __('deployment.server') }}</div>
+                    <div class="resource-tags">{{ __('project.tags_label') }}</div>
                 </div>
 
                 <template x-for="item in paginatedResources" :key="item.uuid">
@@ -190,7 +190,7 @@
                         class="environment-resource-grid group relative min-h-14 items-center border-b border-neutral-200 px-4 py-2.5 transition-colors last:border-b-0 hover:bg-neutral-50 dark:border-white/[0.07] dark:hover:bg-white/[0.025]">
                         <a :href="item.hrefLink"
                             @click="if (item.version === 'v5') { $event.preventDefault(); window.location.assign(item.hrefLink) }"
-                            {{ wireNavigate() }} class="absolute inset-0" :aria-label="`Open ${item.name}`"></a>
+                            {{ wireNavigate() }} class="absolute inset-0" :aria-label="`{{ __('project.open') }} ${item.name}`"></a>
                         <div class="flex min-w-0 items-center gap-3">
                             <div
                                 class="flex size-8 shrink-0 items-center justify-center rounded-lg border border-neutral-200 bg-neutral-50 text-neutral-500 dark:border-white/[0.08] dark:bg-white/[0.035] dark:text-fg-dim">
@@ -245,7 +245,7 @@
                         </div>
 
                         <div class="resource-server truncate text-[12px] text-neutral-600 dark:text-fg-dim"
-                            x-text="item.destination?.server?.name || 'Unknown'"></div>
+                            x-text="item.destination?.server?.name || '{{ __('project.unknown') }}'"></div>
 
                         <div class="resource-tags flex min-w-0 items-center gap-1 overflow-hidden">
                             <template x-for="tag in item.tags.slice(0, 2)" :key="tag.id">
@@ -265,13 +265,13 @@
                 <div x-show="filteredResources.length === 0"
                     class="flex min-h-52 flex-col items-center justify-center px-6 text-center">
                     <x-reicon name="search" class="mb-3 size-6 text-neutral-300 dark:text-fg-faint" />
-                    <p class="text-[13px] font-medium">No matching resources</p>
+                    <p class="text-[13px] font-medium">{{ __('project.no_matching_resources') }}</p>
                     <p class="mt-1 text-[12px] text-neutral-500 dark:text-fg-dim">
-                        Try a different search or filter.
+                        {{ __('project.try_different_search_or_filter') }}
                     </p>
                 </div>
                 <x-client-pagination x-show="filteredResources.length > 0"
-                    summary="filteredResources.length === 0 ? '0 resources' : `${rangeStart}-${rangeEnd} of ${filteredResources.length}`"
+                    summary="filteredResources.length === 0 ? '{{ __('project.zero_resources') }}' : `${rangeStart}-${rangeEnd} {{ __('project.pagination_of') }} ${filteredResources.length}`"
                     page-size-model="pageSize" storage-key="coolify.page-size.environment-resources" />
             </div>
 
@@ -283,7 +283,7 @@
                             <a :href="item.hrefLink"
                                 @click="if (item.version === 'v5') { $event.preventDefault(); window.location.assign(item.hrefLink) }"
                                 {{ wireNavigate() }} class="absolute inset-0 rounded-xl"
-                                :aria-label="`Open ${item.name}`"></a>
+                                :aria-label="`{{ __('project.open') }} ${item.name}`"></a>
 
                             <div class="flex items-start gap-3">
                                 <div
@@ -330,14 +330,14 @@
                 <div x-show="filteredResources.length === 0"
                     class="flex min-h-52 flex-col items-center justify-center rounded-xl border border-neutral-200 bg-white px-6 text-center dark:border-white/[0.08] dark:bg-white/[0.05]">
                     <x-reicon name="search" class="mb-3 size-6 text-neutral-300 dark:text-fg-faint" />
-                    <p class="text-[13px] font-medium">No matching resources</p>
+                    <p class="text-[13px] font-medium">{{ __('project.no_matching_resources') }}</p>
                     <p class="mt-1 text-[12px] text-neutral-500 dark:text-fg-dim">
-                        Try a different search or filter.
+                        {{ __('project.try_different_search_or_filter') }}
                     </p>
                 </div>
                 <x-client-pagination x-show="filteredResources.length > 0"
                     class="mt-3 rounded-xl border border-neutral-200 bg-white shadow-sm dark:border-white/[0.08] dark:bg-white/[0.05]"
-                    summary="filteredResources.length === 0 ? '0 resources' : `${rangeStart}-${rangeEnd} of ${filteredResources.length}`"
+                    summary="filteredResources.length === 0 ? '{{ __('project.zero_resources') }}' : `${rangeStart}-${rangeEnd} {{ __('project.pagination_of') }} ${filteredResources.length}`"
                     page-size-model="pageSize" storage-key="coolify.page-size.environment-resources" />
             </div>
         @endif
@@ -374,7 +374,7 @@
             get filterGroups() {
                 return [{
                         key: 'typeFilters',
-                        label: 'Resource types',
+                        label: '{{ __('resource.filter_types') }}',
                         options: this.uniqueOptions(this.resources.map((item) => ({
                             value: item.type,
                             label: item.typeLabel,
@@ -382,22 +382,22 @@
                     },
                     {
                         key: 'tagFilters',
-                        label: 'Tags',
+                        label: '{{ __('project.tags_label') }}',
                         options: this.uniqueOptions(this.resources.flatMap((item) =>
                             (item.tags || []).map((tag) => ({ value: tag.name, label: tag.name }))
                         )),
                     },
                     {
                         key: 'serverFilters',
-                        label: 'Servers',
+                        label: '{{ __('resource.filter_servers') }}',
                         options: this.uniqueOptions(this.resources.map((item) => ({
-                            value: item.destination?.server?.name || 'Unknown',
-                            label: item.destination?.server?.name || 'Unknown',
+                            value: item.destination?.server?.name || '{{ __('project.unknown') }}',
+                            label: item.destination?.server?.name || '{{ __('project.unknown') }}',
                         }))),
                     },
                     {
                         key: 'statusFilters',
-                        label: 'Statuses',
+                        label: '{{ __('resource.filter_statuses') }}',
                         options: this.uniqueOptions(this.resources.map((item) => ({
                             value: this.statusState(item),
                             label: this.statusLabel(item),
@@ -414,25 +414,25 @@
                     .filter((option) => this[group.key].includes(option.value))
                     .map((option) => option.label));
 
-                if (selectedLabels.length === 0) return 'Filter';
+                if (selectedLabels.length === 0) return '{{ __('resource.filter') }}';
                 if (selectedLabels.length === 1) return selectedLabels[0];
                 return `${selectedLabels[0]} +${selectedLabels.length - 1}`;
             },
             sortOptions: [{
                     value: 'name-asc',
-                    label: 'Name A–Z'
+                    label: '{{ __('project.sort_name_asc') }}'
                 },
                 {
                     value: 'name-desc',
-                    label: 'Name Z–A'
+                    label: '{{ __('project.sort_name_desc') }}'
                 },
                 {
                     value: 'type',
-                    label: 'Resource type'
+                    label: '{{ __('resource.sort_type') }}'
                 },
                 {
                     value: 'status',
-                    label: 'Status'
+                    label: '{{ __('deployment.status') }}'
                 },
             ],
             get filteredResources() {
@@ -441,7 +441,7 @@
                     const matchesType = this.typeFilters.length === 0 || this.typeFilters.includes(item.type);
                     const matchesTags = this.tagFilters.length === 0 || (item.tags || [])
                         .some((tag) => this.tagFilters.includes(tag.name));
-                    const serverName = item.destination?.server?.name || 'Unknown';
+                    const serverName = item.destination?.server?.name || '{{ __('project.unknown') }}';
                     const matchesServer = this.serverFilters.length === 0 || this.serverFilters.includes(serverName);
                     const matchesStatus = this.statusFilters.length === 0 || this.statusFilters.includes(this.statusState(item));
                     const searchable = [
@@ -533,15 +533,25 @@
             },
             statusLabel(item) {
                 if (item.restartLimitReached) {
-                    return 'Restart limit reached';
+                    return '{{ __('resource.status_restart_limit') }}';
                 }
 
+                const stateLabels = {
+                    running: '{{ __('resource.status_running') }}',
+                    starting: '{{ __('resource.status_starting') }}',
+                    restarting: '{{ __('resource.status_restarting') }}',
+                    degraded: '{{ __('resource.status_degraded') }}',
+                    exited: '{{ __('resource.status_exited') }}',
+                    stopped: '{{ __('resource.status_stopped') }}',
+                    failed: '{{ __('resource.status_failed') }}',
+                    unknown: '{{ __('resource.status_unknown') }}',
+                };
                 const state = this.statusState(item);
-                return state.charAt(0).toUpperCase() + state.slice(1);
+                return stateLabels[state] || state.charAt(0).toUpperCase() + state.slice(1);
             },
             statusTitle(item) {
                 if (item.restartLimitReached) {
-                    return `${item.restartCount}/${item.maxRestartCount} restarts. Container preserved.`;
+                    return `${item.restartCount}/${item.maxRestartCount} {{ __('resource.restarts') }}. {{ __('resource.container_preserved') }}`;
                 }
 
                 return this.statusLabel(item);
