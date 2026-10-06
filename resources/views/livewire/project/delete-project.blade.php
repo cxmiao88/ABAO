@@ -1,7 +1,7 @@
-<x-modal-confirmation title="Confirm Project Deletion?" buttonTitle="Delete Project" isErrorButton submitAction="delete"
+<x-modal-confirmation title="{{ __('project.delete_confirm_title') }}" buttonTitle="{{ __('project.delete_button') }}" isErrorButton submitAction="delete"
     :actions="[
-        'This will delete the selected project',
-        'All Environments inside the project will be deleted as well.',
-    ]" confirmationLabel="Please confirm the execution of the actions by entering the Project Name below"
-    shortConfirmationLabel="Project Name" confirmationText="{{ $projectName }}" :confirmWithPassword="false"
-    step2ButtonText="Permanently Delete" />
+        __('project.delete_action_1'),
+        __('project.delete_action_2'),
+    ]" confirmationLabel="{{ __('project.delete_confirm_label') }}"
+    shortConfirmationLabel="{{ __('project.name_label') }}" confirmationText="{{ $projectName }}" :confirmWithPassword="false"
+    step2ButtonText="{{ __('project.permanently_delete') }}" />

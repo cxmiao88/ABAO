@@ -1,6 +1,6 @@
 <div class="application-settings-form w-full">
     <x-slot:title>
-        Dashboard | Coolify
+        {{ __('nav.dashboard') }} | Coolify
     </x-slot>
 
     @if (session('error'))
@@ -9,22 +9,28 @@
 
     @php
         $dashboardItemLimit = 8;
+        // Compatible with older images that do not pass these in yet.
+        $pendingInvitations = isset($pendingInvitations) && $pendingInvitations !== null ? $pendingInvitations : collect();
         $dashboardProjects = $projects->sortBy('name', SORT_NATURAL)->take($dashboardItemLimit);
         $dashboardServers = $servers->sortBy('name', SORT_NATURAL)->take($dashboardItemLimit);
-        $hasTrafficAnalytics = $servers->contains(fn ($server) => $server->isTrafficAnalyticsEnabled());
+        $hasTrafficAnalytics = $servers->contains(
+            fn ($server) => method_exists($server, 'isTrafficAnalyticsEnabled') && $server->isTrafficAnalyticsEnabled()
+        );
     @endphp
 
     <div class="flex min-w-0 flex-col gap-8">
         @if ($pendingInvitations->isNotEmpty())
             <div class="flex min-w-0 flex-col gap-2">
                 @foreach ($pendingInvitations as $invitation)
-                    <x-callout type="info" title="Pending team invitation"
+                    <x-callout type="info" title="{{ __('dashboard.pending_team_invitation') }}"
                         wire:key="dashboard-invitation-{{ $invitation->uuid }}">
                         <div class="flex min-w-0 flex-wrap items-center justify-between gap-2">
-                            <span class="min-w-0">Team <span class="font-semibold">{{ $invitation->team->name }}</span>
-                                invited you as {{ ucfirst($invitation->role) }}.</span>
+                            <span class="min-w-0">{!! __('dashboard.invitation_text', [
+                                'team' => '<span class="font-semibold">' . e($invitation->team->name) . '</span>',
+                                'role' => e(ucfirst($invitation->role instanceof \App\Enums\Role ? $invitation->role->value : $invitation->role)),
+                            ]) !!}</span>
                             <a href="{{ route('team.invitation.show', $invitation->uuid) }}" class="button shrink-0">
-                                Review invitation
+                                {{ __('dashboard.review_invitation') }}
                             </a>
                         </div>
                     </x-callout>
@@ -39,12 +45,12 @@
         @endif
 
         <section class="mb-0! min-w-0">
-            <x-section-heading title="Projects" subtitle="Your deployment workspaces"
+            <x-section-heading title="{{ __('nav.projects') }}" subtitle="{{ __('dashboard.projects_subtitle') }}"
                 :href="route('project.index')" />
 
             @if ($dashboardProjects->isEmpty())
-                <x-empty title="No projects yet"
-                    description="Create your first deployment workspace from Projects."
+                <x-empty title="{{ __('dashboard.no_projects') }}"
+                    description="{{ __('dashboard.no_projects_description') }}"
                     icon-name="projects" size="sm" />
             @else
                 <div class="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -70,7 +76,7 @@
                             class="group relative flex min-h-28 min-w-0 flex-col rounded-xl border border-neutral-200 bg-white p-3 shadow-sm transition-all hover:-translate-y-px hover:border-neutral-300 hover:shadow-md dark:border-white/[0.08] dark:bg-white/[0.05] dark:hover:border-white/[0.14]">
                             <a href="{{ $project->navigateTo() }}" {{ wireNavigate() }}
                                 class="absolute inset-0 rounded-xl"
-                                aria-label="Open {{ $project->name }}"></a>
+                                aria-label="{{ __('project.open') }} {{ $project->name }}"></a>
 
                             <div class="flex min-w-0 items-start gap-3">
                                 <div
@@ -96,13 +102,13 @@
 
                             <div class="mt-auto flex items-center justify-between gap-3 border-t border-neutral-100 pt-2.5 dark:border-white/[0.06]">
                                 <div class="relative z-10 flex min-w-0 items-center gap-3 text-[11px] font-medium text-neutral-500 dark:text-fg-dim">
-                                    <span class="inline-flex items-center gap-1" data-tooltip="Environments"
-                                        aria-label="Environments">
+                                    <span class="inline-flex items-center gap-1" data-tooltip="{{ __('project.environments') }}"
+                                        aria-label="{{ __('project.environments') }}">
                                         <x-reicon name="layers" class="size-3.5 text-neutral-400 dark:text-fg-faint" />
                                         {{ $project->environments->count() }}
                                     </span>
-                                    <span class="inline-flex items-center gap-1" data-tooltip="Resources"
-                                        aria-label="Resources">
+                                    <span class="inline-flex items-center gap-1" data-tooltip="{{ __('project.resources') }}"
+                                        aria-label="{{ __('project.resources') }}">
                                         <x-reicon name="grid" class="size-3.5 text-neutral-400 dark:text-fg-faint" />
                                         {{ $resourceCount }}
                                     </span>
@@ -117,8 +123,8 @@
                                             ]) }}"
                                                 {{ wireNavigate() }}
                                                 class="flex size-6.5 items-center justify-center rounded-md text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-black dark:text-fg-faint dark:hover:bg-white/[0.06] dark:hover:text-fg"
-                                                title="Add resource"
-                                                aria-label="Add resource to {{ $project->name }}">
+                                                title="{{ __('project.add_resource') }}"
+                                                aria-label="{{ __('project.add_resource_to') }} {{ $project->name }}">
                                                 <x-reicon name="plus" class="size-3" />
                                             </a>
                                         @endcan
@@ -127,8 +133,8 @@
                                         <a href="{{ route('project.edit', ['project_uuid' => $project->uuid]) }}"
                                             {{ wireNavigate() }}
                                             class="flex size-6.5 items-center justify-center rounded-md text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-black dark:text-fg-faint dark:hover:bg-white/[0.06] dark:hover:text-fg"
-                                            title="Project settings"
-                                            aria-label="Open settings for {{ $project->name }}">
+                                            title="{{ __('project.settings') }}"
+                                            aria-label="{{ __('project.open_settings_for') }} {{ $project->name }}">
                                             <x-reicon name="settings" class="size-3" />
                                         </a>
                                     @endcan
@@ -141,34 +147,34 @@
         </section>
 
         <section class="mb-0! min-w-0">
-            <x-section-heading title="Servers" subtitle="Infrastructure available for deployments"
+            <x-section-heading title="{{ __('nav.servers') }}" subtitle="{{ __('dashboard.servers_subtitle') }}"
                 :href="route('server.index')" />
 
             @if ($dashboardServers->isEmpty())
                 @if ($privateKeys->isEmpty())
-                    <x-empty title="A private key is required"
-                        description="Add an SSH private key before connecting your first server."
+                    <x-empty title="{{ __('dashboard.private_key_required') }}"
+                        description="{{ __('dashboard.private_key_description') }}"
                         icon-name="keys" size="sm">
                         @can('create', App\Models\PrivateKey::class)
                             <x-slot:contents>
                                 <a href="{{ route('security.private-key.index') }}" {{ wireNavigate() }}
                                     class="button button-highlighted">
                                     <x-reicon name="plus" class="size-3.5" />
-                                    Add private key
+                                    {{ __('dashboard.add_private_key') }}
                                 </a>
                             </x-slot:contents>
                         @endcan
                     </x-empty>
                 @else
-                    <x-empty title="No servers yet"
-                        description="Connect infrastructure for your deployments."
+                    <x-empty title="{{ __('dashboard.no_servers') }}"
+                        description="{{ __('dashboard.no_servers_description') }}"
                         icon-name="servers" size="sm">
                         @can('createAnyResource')
                             <x-slot:contents>
                                 <a href="{{ route('server.create') }}" {{ wireNavigate() }}
                                     class="button button-highlighted">
                                     <x-reicon name="plus" class="size-3.5" />
-                                    New server
+                                    {{ __('dashboard.new_server') }}
                                 </a>
                             </x-slot:contents>
                         @endcan
@@ -182,17 +188,17 @@
                             $sentinelNeedsAttention = $server->isSentinelEnabled() && $server->sentinelStatus() === 'out_of_sync';
 
                             [$serverStatus, $serverStatusType] = match (true) {
-                                $server->settings->force_disabled => ['Disabled', 'error'],
-                                ! $server->settings->is_reachable && ! $server->settings->is_usable => ['Unavailable', 'error'],
-                                ! $server->settings->is_reachable => ['Unreachable', 'error'],
-                                ! $server->settings->is_usable => ['Not ready', 'warning'],
-                                $proxyNeedsAttention || $sentinelNeedsAttention => ['Attention required', 'warning'],
-                                default => ['Ready', 'success'],
+                                $server->settings->force_disabled => [__('server.status_disabled'), 'error'],
+                                ! $server->settings->is_reachable && ! $server->settings->is_usable => [__('server.status_unavailable'), 'error'],
+                                ! $server->settings->is_reachable => [__('server.status_unreachable'), 'error'],
+                                ! $server->settings->is_usable => [__('server.status_not_ready'), 'warning'],
+                                $proxyNeedsAttention || $sentinelNeedsAttention => [__('server.status_attention'), 'warning'],
+                                default => [__('server.status_ready'), 'success'],
                             };
                         @endphp
 
                         <a href="{{ route('server.show', ['server_uuid' => $server->uuid]) }}"
-                            {{ wireNavigate() }} aria-label="Open {{ $server->name }}"
+                            {{ wireNavigate() }} aria-label="{{ __('project.open') }} {{ $server->name }}"
                             class="group relative flex min-h-28 min-w-0 flex-col rounded-xl border border-neutral-200 bg-white p-3 shadow-sm transition-all hover:-translate-y-px hover:border-neutral-300 hover:shadow-md dark:border-white/[0.08] dark:bg-white/[0.05] dark:hover:border-white/[0.14]">
                             @if ($server->isMetricsEnabled())
                                 <livewire:dashboard.server-metrics-chart :server="$server"
@@ -215,7 +221,7 @@
                                 </div>
                                 @if ($serverStatusType !== 'success')
                                     <span data-tooltip="{{ $serverStatus }}"
-                                        aria-label="Server status: {{ $serverStatus }}"
+                                        aria-label="{{ __('server.status_label') }}: {{ $serverStatus }}"
                                         @class([
                                             'flex size-6 shrink-0 items-center justify-center rounded-md',
                                             'text-orange-500 dark:text-warning' => $serverStatusType === 'warning',

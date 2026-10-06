@@ -1,10 +1,10 @@
 <div>
-    <x-slot:title>{{ data_get_str($project, 'name')->limit(10) }} > Clone | Coolify</x-slot>
+    <x-slot:title>{{ data_get_str($project, 'name')->limit(10) }} > {{ __('project.clone') }} | Coolify</x-slot>
     <div class="w-full max-w-none">
         <header class="mb-5">
             <h1 class="truncate text-[24px]! leading-7! font-semibold! tracking-tight!">{{ $environment->name }}</h1>
             <p class="mt-1 text-[13px] text-neutral-500 dark:text-fg-dim">
-                Clone this environment inside {{ $project->name }}
+                {{ __('project.clone_this_environment_in', ['project' => $project->name]) }}
             </p>
         </header>
 
@@ -12,13 +12,13 @@
         <section class="application-settings-section">
             <div class="application-settings-section-header">
                 <div>
-                    <h2>Clone environment</h2>
-                    <p>Copy every resource from {{ $environment->name }} to a new project or environment.</p>
+                    <h2>{{ __('project.clone_environment') }}</h2>
+                    <p>{{ __('project.clone_section_description', ['environment' => $environment->name]) }}</p>
                 </div>
             </div>
             <div class="application-settings-section-body">
                 <div class="max-w-md">
-                    <x-forms.input required id="newName" label="New name" />
+                    <x-forms.input required id="newName" label="{{ __('project.new_name_label') }}" />
                 </div>
             </div>
         </section>
@@ -26,8 +26,8 @@
         <section class="application-settings-section">
             <div class="application-settings-section-header">
                 <div>
-                    <h2>Destination</h2>
-                    <p>Choose the server and Docker network that will receive the cloned resources.</p>
+                    <h2>{{ __('project.destination_title') }}</h2>
+                    <p>{{ __('project.destination_description') }}</p>
                 </div>
             </div>
             <div class="application-settings-section-body p-0!">
@@ -38,9 +38,9 @@
                 @endphp
                 <div class="data-table">
                     <div class="data-table-header clone-destinations-table-grid">
-                        <span><span class="sr-only">Selected</span></span>
-                        <span>Server</span>
-                        <span>Network</span>
+                        <span><span class="sr-only">{{ __('project.selected') }}</span></span>
+                        <span>{{ __('deployment.server') }}</span>
+                        <span>{{ __('project.network') }}</span>
                     </div>
                     @foreach ($servers->sortBy('id') as $server)
                         @foreach ($server->destinations() as $destination)
@@ -70,7 +70,7 @@
                     @endforeach
                     <div
                         class="flex min-h-11 items-center border-t border-neutral-200 px-4 text-[11px] text-neutral-500 dark:border-white/[0.08] dark:text-fg-faint">
-                        {{ $destinationCount }} {{ Str::plural('destination', $destinationCount) }}
+                        {{ __('project.destinations_count', ['count' => $destinationCount]) }}
                     </div>
                 </div>
             </div>
@@ -84,16 +84,16 @@
             @endphp
             <div class="application-settings-section-header">
                 <div>
-                    <h2>Resources</h2>
-                    <p>{{ $resourceCount }} {{ Str::plural('resource', $resourceCount) }} will be cloned.</p>
+                    <h2>{{ __('project.resources') }}</h2>
+                    <p>{{ __('project.resources_will_be_cloned', ['count' => $resourceCount]) }}</p>
                 </div>
             </div>
             <div class="application-settings-section-body p-0!">
                 <div class="data-table">
                     <div class="data-table-header clone-resources-table-grid">
-                        <span>Name</span>
-                        <span>Type</span>
-                        <span>Description</span>
+                        <span>{{ __('project.name_label') }}</span>
+                        <span>{{ __('project.type_label') }}</span>
+                        <span>{{ __('project.description') }}</span>
                     </div>
                     @foreach ($environment->applications->sortBy('name') as $application)
                         <div
@@ -101,7 +101,7 @@
                             <div class="truncate text-[12px] font-semibold text-black dark:text-fg">
                                 {{ $application->name }}
                             </div>
-                            <div><x-status-badge status="Application" type="neutral" /></div>
+                            <div><x-status-badge status="{{ __('resource.type_application') }}" type="neutral" /></div>
                             <div class="truncate text-[11px] text-neutral-600 dark:text-fg-dim">
                                 {{ $application->description ?: '-' }}
                             </div>
@@ -113,7 +113,7 @@
                             <div class="truncate text-[12px] font-semibold text-black dark:text-fg">
                                 {{ $database->name }}
                             </div>
-                            <div><x-status-badge status="Database" type="neutral" /></div>
+                            <div><x-status-badge status="{{ __('resource.type_database') }}" type="neutral" /></div>
                             <div class="truncate text-[11px] text-neutral-600 dark:text-fg-dim">
                                 {{ $database->description ?: '-' }}
                             </div>
@@ -125,7 +125,7 @@
                             <div class="truncate text-[12px] font-semibold text-black dark:text-fg">
                                 {{ $service->name }}
                             </div>
-                            <div><x-status-badge status="Service" type="neutral" /></div>
+                            <div><x-status-badge status="{{ __('resource.type_service') }}" type="neutral" /></div>
                             <div class="truncate text-[11px] text-neutral-600 dark:text-fg-dim">
                                 {{ $service->description ?: '-' }}
                             </div>
@@ -133,18 +133,18 @@
                     @endforeach
                     <div
                         class="flex min-h-11 items-center border-t border-neutral-200 px-4 text-[11px] text-neutral-500 dark:border-white/[0.08] dark:text-fg-faint">
-                        {{ $resourceCount }} {{ Str::plural('resource', $resourceCount) }}
+                        {{ __('project.resources_count', ['count' => $resourceCount]) }}
                     </div>
                 </div>
                 <div
                     class="flex flex-col gap-2 border-t border-neutral-200 p-4 sm:flex-row sm:justify-end dark:border-white/[0.06]">
                     <x-forms.button isHighlighted wire:click="clone('environment')"
                         :disabled="! filled($selectedDestination)">
-                        Clone to environment
+                        {{ __('project.clone_to_environment') }}
                     </x-forms.button>
                     <x-forms.button isHighlighted wire:click="clone('project')"
                         :disabled="! filled($selectedDestination)">
-                        Clone to project
+                        {{ __('project.clone_to_project') }}
                     </x-forms.button>
                 </div>
             </div>
