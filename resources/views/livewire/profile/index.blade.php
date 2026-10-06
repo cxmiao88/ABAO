@@ -142,6 +142,18 @@
              </section>
          </form>
 
+         <section class="application-settings-section">
+             <div class="application-settings-section-header">
+                 <div>
+                     <h2>Language</h2>
+                     <p>Interface display language.</p>
+                 </div>
+             </div>
+             <div class="application-settings-section-body">
+                 <livewire:language-switcher />
+             </div>
+         </section>
+
          @if ($uses_sso)
              <x-callout type="info" title="Email managed by SSO">
                  Signed in with SSO @if ($sso_provider_label) ({{ $sso_provider_label }}) @endif. Email is managed by your SSO provider.

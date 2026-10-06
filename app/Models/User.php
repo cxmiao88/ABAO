@@ -58,6 +58,7 @@ class User extends Authenticatable implements SendsEmail
         'avatar_path',
         'avatar_storage_type',
         'avatar_s3_storage_id',
+        'locale',
     ];
 
     protected $hidden = [
