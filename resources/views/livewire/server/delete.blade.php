@@ -1,6 +1,6 @@
 <div>
     <x-slot:title>
-        {{ data_get_str($server, 'name')->limit(10) }} > Delete Server | Coolify
+        {{ data_get_str($server, 'name')->limit(10) }} > {{ __('server.delete_title') }} | Coolify
     </x-slot>
 
     <livewire:server.navbar :server="$server" />
@@ -11,25 +11,24 @@
 
         <div class="application-settings-form w-full">
             @if (! $server->is_coolify_host)
-                <x-application.settings-section id="server-danger-section" title="Delete server"
-                    helper="Permanently remove this server and its configuration from Coolify."
+                <x-application.settings-section id="server-danger-section" :title="__('server.delete_section_title')"
+                    :helper="__('server.delete_section_helper')"
                     class="server-danger-section">
-                    <x-danger-zone title="This action cannot be undone">
+                    <x-danger-zone :title="__('server.delete_cannot_undo')">
                         <p>
-                        The server will be removed from Coolify.
+                        {{ __('server.delete_will_remove') }}
                         @if ($server->definedResources()->count() > 0)
-                            It currently contains managed resources. Enable force deletion in the confirmation only
-                            if those resources should also be removed.
+                            {{ __('server.delete_has_resources') }}
                         @endif
                         </p>
-                        <p>Type the server name in the confirmation dialog to continue.</p>
+                        <p>{{ __('server.delete_type_name_hint') }}</p>
                         <x-slot:action>
-                        <x-modal-confirmation title="Confirm Server Deletion?" isErrorButton
-                            buttonTitle="Delete server" submitAction="delete"
-                            :actions="['This server will be permanently deleted from Coolify.']"
+                        <x-modal-confirmation :title="__('server.delete_confirm_title')" isErrorButton
+                            :buttonTitle="__('server.delete_confirm_button')" submitAction="delete"
+                            :actions="[__('server.delete_confirm_action')]"
                             :checkboxes="$checkboxes" confirmationText="{{ $server->name }}"
-                            confirmationLabel="Please confirm by entering the Server Name below"
-                            shortConfirmationLabel="Server Name" />
+                            :confirmationLabel="__('server.delete_confirm_label')"
+                            :shortConfirmationLabel="__('server.delete_confirm_short_label')" />
                         </x-slot:action>
                     </x-danger-zone>
                 </x-application.settings-section>

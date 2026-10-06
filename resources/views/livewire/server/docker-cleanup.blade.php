@@ -1,6 +1,6 @@
 <div>
     <x-slot:title>
-        {{ data_get_str($server, 'name')->limit(10) }} > Docker Cleanup | Coolify
+        {{ data_get_str($server, 'name')->limit(10) }} > {{ __('server.menu_docker_cleanup') }} | Coolify
     </x-slot>
 
     <livewire:server.navbar :server="$server" />
@@ -15,31 +15,31 @@
                 <x-unsaved-bar action="submit"
                     targets="dockerCleanupFrequency,dockerCleanupThreshold" />
 
-                <x-application.settings-section id="docker-cleanup-overview-section" title="Docker cleanup"
-                    helper="Remove unused Docker data and keep disk usage under control.">
+                <x-application.settings-section id="docker-cleanup-overview-section" :title="__('server.menu_docker_cleanup')"
+                    :helper="__('server.dc_overview_helper')">
                     <x-slot:actions>
                         @can('update', $server)
-                            <x-modal-confirmation title="Confirm Docker Cleanup?"
-                                buttonTitle="Run cleanup" isHighlightedButton submitAction="manualCleanup"
+                            <x-modal-confirmation :title="__('server.dc_confirm_title')"
+                                :buttonTitle="__('server.dc_run_cleanup')" isHighlightedButton submitAction="manualCleanup"
                                 :actions="[
-                                    'Deletes stopped containers managed by Coolify.',
-                                    'Deletes unused images and clears the build cache.',
-                                    'Removes old Coolify helper images.',
-                                    'May delete unused volumes or networks when those options are enabled.',
+                                    __('server.dc_action_1'),
+                                    __('server.dc_action_2'),
+                                    __('server.dc_action_3'),
+                                    __('server.dc_action_4'),
                                 ]" :confirmWithText="false" :confirmWithPassword="false"
-                                step2ButtonText="Run Docker Cleanup" />
+                                :step2ButtonText="__('server.dc_step2_button')" />
                         @endcan
                     </x-slot:actions>
 
                     @if (!isCloud() && $this->isCleanupStale)
-                        <x-callout type="warning" title="Docker cleanup may be stalled">
-                            The last cleanup ran {{ $this->lastExecutionTime ?? 'at an unknown time' }}.
+                        <x-callout type="warning" :title="__('server.dc_stalled_title')">
+                            {{ __('server.dc_stalled_last_run', ['time' => $this->lastExecutionTime ?? __('server.dc_unknown_time')]) }}
                             @if (!$this->isSchedulerHealthy)
-                                The scheduled job manager also appears inactive.
+                                {{ __('server.dc_scheduler_inactive') }}
                             @endif
-                            Run
+                            {{ __('server.dc_stalled_command_prefix') }}
                             <code class="rounded bg-black/10 px-1 dark:bg-white/10">php artisan cleanup:redis --clear-locks</code>
-                            on the Coolify instance to clear stale locks.
+                            {{ __('server.dc_stalled_command_suffix') }}
                         </x-callout>
                     @else
                         <div class="flex items-start gap-3">
@@ -48,9 +48,9 @@
                                 <x-reicon name="storages" class="size-4" />
                             </div>
                             <div>
-                                <p class="text-sm font-medium text-neutral-950 dark:text-fg">Scheduled maintenance</p>
+                                <p class="text-sm font-medium text-neutral-950 dark:text-fg">{{ __('server.dc_scheduled_title') }}</p>
                                 <p class="mt-1 text-xs leading-5 text-neutral-500 dark:text-fg-dim">
-                                    Cleanup runs automatically using the schedule and threshold configured below.
+                                    {{ __('server.dc_scheduled_description') }}
                                 </p>
                             </div>
                         </div>
@@ -58,58 +58,57 @@
                 </x-application.settings-section>
 
                 <x-application.settings-section id="docker-cleanup-configuration-section"
-                    title="Cleanup configuration"
-                    helper="Choose when cleanup runs and whether it should wait for a disk threshold.">
+                    :title="__('server.dc_config_title')"
+                    :helper="__('server.dc_config_helper')">
                     <div class="grid gap-4 lg:grid-cols-2">
                         <x-forms.input canGate="update" :canResource="$server" placeholder="0 0 * * *"
-                            id="dockerCleanupFrequency" label="Cleanup frequency" required
-                            helper="Cron expression or preset such as hourly, daily, weekly, monthly, or yearly." />
+                            id="dockerCleanupFrequency" :label="__('server.dc_frequency_label')" required
+                            :helper="__('server.adv_check_frequency_helper')" />
                         @if (!$forceDockerCleanup)
                             <x-forms.input canGate="update" :canResource="$server" id="dockerCleanupThreshold"
-                                type="number" min="1" max="99" label="Disk threshold" required
-                                helper="Run cleanup after disk usage exceeds this percentage." />
+                                type="number" min="1" max="99" :label="__('server.dc_threshold_label')" required
+                                :helper="__('server.dc_threshold_helper')" />
                         @endif
-                        <x-forms.listbox id="forceDockerCleanup" label="Cleanup trigger"
-                            helper="Forced cleanup runs on every schedule without waiting for the threshold."
+                        <x-forms.listbox id="forceDockerCleanup" :label="__('server.dc_trigger_label')"
+                            :helper="__('server.dc_trigger_helper')"
                             onChange="instantSave" :options="[
-                                ['value' => false, 'label' => 'Only above disk threshold'],
-                                ['value' => true, 'label' => 'Run on every schedule'],
+                                ['value' => false, 'label' => __('server.dc_trigger_threshold')],
+                                ['value' => true, 'label' => __('server.dc_trigger_schedule')],
                             ]" />
                     </div>
                 </x-application.settings-section>
 
-                <x-application.settings-section id="docker-cleanup-advanced-section" title="Advanced cleanup"
-                    helper="Control destructive cleanup behavior and application image retention.">
-                    <x-callout type="warning" title="These options can remove recoverable data">
-                        Unused volumes may contain data from stopped containers, while removing retained images
-                        disables rollback to older application versions.
+                <x-application.settings-section id="docker-cleanup-advanced-section" :title="__('server.dc_advanced_title')"
+                    :helper="__('server.dc_advanced_helper')">
+                    <x-callout type="warning" :title="__('server.dc_destructive_warning_title')">
+                        {{ __('server.dc_destructive_warning_text') }}
                     </x-callout>
 
                     <div class="mt-4 grid gap-4 lg:grid-cols-3">
-                        <x-forms.listbox id="deleteUnusedVolumes" label="Unused volumes"
-                            helper="Permanently remove volumes not attached to running containers."
+                        <x-forms.listbox id="deleteUnusedVolumes" :label="__('server.dc_volumes_label')"
+                            :helper="__('server.dc_volumes_helper')"
                             onChange="instantSave" :options="[
-                                ['value' => false, 'label' => 'Keep unused volumes'],
-                                ['value' => true, 'label' => 'Delete unused volumes'],
+                                ['value' => false, 'label' => __('server.dc_volumes_keep')],
+                                ['value' => true, 'label' => __('server.dc_volumes_delete')],
                             ]" />
-                        <x-forms.listbox id="deleteUnusedNetworks" label="Unused networks"
-                            helper="Remove Docker networks not attached to running containers."
+                        <x-forms.listbox id="deleteUnusedNetworks" :label="__('server.dc_networks_label')"
+                            :helper="__('server.dc_networks_helper')"
                             onChange="instantSave" :options="[
-                                ['value' => false, 'label' => 'Keep unused networks'],
-                                ['value' => true, 'label' => 'Delete unused networks'],
+                                ['value' => false, 'label' => __('server.dc_networks_keep')],
+                                ['value' => true, 'label' => __('server.dc_networks_delete')],
                             ]" />
-                        <x-forms.listbox id="disableApplicationImageRetention" label="Application images"
-                            helper="Choose Keep retained images to follow each application’s Images to keep setting under Rollback. Delete all old images ignores that setting and keeps only the running image."
+                        <x-forms.listbox id="disableApplicationImageRetention" :label="__('server.dc_images_label')"
+                            :helper="__('server.dc_images_helper')"
                             onChange="instantSave" :options="[
-                                ['value' => false, 'label' => 'Keep retained images'],
-                                ['value' => true, 'label' => 'Delete all old images'],
+                                ['value' => false, 'label' => __('server.dc_images_keep')],
+                                ['value' => true, 'label' => __('server.dc_images_delete')],
                             ]" />
                     </div>
                 </x-application.settings-section>
             </form>
 
-            <x-application.settings-section id="docker-cleanup-executions-section" title="Recent executions"
-                helper="Review cleanup status, duration, and command output." flush>
+            <x-application.settings-section id="docker-cleanup-executions-section" :title="__('server.dc_executions_title')"
+                :helper="__('server.dc_executions_helper')" flush>
                 <livewire:server.docker-cleanup-executions :server="$server" />
             </x-application.settings-section>
         </div>

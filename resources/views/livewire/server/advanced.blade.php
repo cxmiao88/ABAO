@@ -1,6 +1,6 @@
 <div>
     <x-slot:title>
-        {{ data_get_str($server, 'name')->limit(10) }} > Advanced | Coolify
+        {{ data_get_str($server, 'name')->limit(10) }} > {{ __('server.menu_advanced') }} | Coolify
     </x-slot>
 
     <livewire:server.navbar :server="$server" />
@@ -12,47 +12,47 @@
         <form wire:submit="submit" class="application-settings-form flex w-full flex-col gap-6">
             <x-unsaved-bar action="submit" />
 
-            <x-application.settings-section id="server-disk-usage-section" title="Disk usage"
-                helper="Control when Coolify checks this server and when your team is notified.">
+            <x-application.settings-section id="server-disk-usage-section" :title="__('server.adv_disk_title')"
+                :helper="__('server.adv_disk_helper')">
                 <div class="grid gap-4 lg:grid-cols-3">
                     <x-forms.input canGate="update" :canResource="$server" placeholder="0 23 * * *"
-                        id="serverDiskUsageCheckFrequency" label="Check frequency" required
-                        helper="Cron expression or preset such as hourly, daily, weekly, monthly, or yearly." />
+                        id="serverDiskUsageCheckFrequency" :label="__('server.adv_check_frequency')" required
+                        :helper="__('server.adv_check_frequency_helper')" />
                     <x-forms.input canGate="update" :canResource="$server"
                         id="serverDiskUsageNotificationThreshold" type="number" min="1" max="99"
-                        label="Notification threshold" required
-                        helper="Notify the team when root filesystem usage exceeds this percentage." />
+                        :label="__('server.adv_notification_threshold')" required
+                        :helper="__('server.adv_notification_threshold_helper')" />
                     <x-forms.input canGate="update" :canResource="$server"
                         id="serverDiskUsageNotificationIntervalHours" type="number" min="1" max="720"
-                        label="Notification interval (hours)" required
-                        helper="Minimum time between high disk usage notifications for this server." />
+                        :label="__('server.adv_notification_interval')" required
+                        :helper="__('server.adv_notification_interval_helper')" />
                 </div>
             </x-application.settings-section>
 
-            <x-application.settings-section id="server-backups-section" title="Backups"
-                helper="Limit how much CPU volume backup compression may use on this server.">
+            <x-application.settings-section id="server-backups-section" :title="__('server.adv_backups_title')"
+                :helper="__('server.adv_backups_helper')">
                 <x-forms.listbox canGate="update" :canResource="$server" id="backupCompressionCpuPercentage"
-                    label="Backup compression CPU" onChange="instantSave"
-                    helper="Sets how many CPU threads can be used to compress volume backups, based on this server's available CPUs." :options="[
-                        ['value' => 25, 'label' => 'Low (25%)'],
-                        ['value' => 50, 'label' => 'Balanced (50%)'],
-                        ['value' => 75, 'label' => 'High (75%)'],
-                        ['value' => 100, 'label' => 'Maximum (100%)'],
+                    :label="__('server.adv_backup_cpu_label')" onChange="instantSave"
+                    :helper="__('server.adv_backup_cpu_helper')" :options="[
+                        ['value' => 25, 'label' => __('server.adv_backup_cpu_low')],
+                        ['value' => 50, 'label' => __('server.adv_backup_cpu_balanced')],
+                        ['value' => 75, 'label' => __('server.adv_backup_cpu_high')],
+                        ['value' => 100, 'label' => __('server.adv_backup_cpu_max')],
                     ]" />
             </x-application.settings-section>
 
-            <x-application.settings-section id="server-builds-section" title="Builds"
-                helper="Set deployment concurrency, execution timeouts, and queue capacity.">
+            <x-application.settings-section id="server-builds-section" :title="__('server.adv_builds_title')"
+                :helper="__('server.adv_builds_helper')">
                 <div class="grid gap-4 lg:grid-cols-3">
                     <x-forms.input canGate="update" :canResource="$server" id="concurrentBuilds"
-                        type="number" min="1" label="Concurrent builds" required
-                        helper="Maximum deployments that can build at the same time." />
+                        type="number" min="1" :label="__('server.adv_concurrent_builds')" required
+                        :helper="__('server.adv_concurrent_builds_helper')" />
                     <x-forms.input canGate="update" :canResource="$server" id="dynamicTimeout"
-                        type="number" min="1" label="Deployment timeout" required
-                        helper="Maximum deployment duration in seconds." />
+                        type="number" min="1" :label="__('server.adv_deployment_timeout')" required
+                        :helper="__('server.adv_deployment_timeout_helper')" />
                     <x-forms.input canGate="update" :canResource="$server" id="deploymentQueueLimit"
-                        type="number" min="1" label="Queue limit" required
-                        helper="Maximum queued deployments before new requests are rejected." />
+                        type="number" min="1" :label="__('server.adv_queue_limit')" required
+                        :helper="__('server.adv_queue_limit_helper')" />
                 </div>
             </x-application.settings-section>
         </form>
