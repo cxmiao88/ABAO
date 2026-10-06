@@ -1,6 +1,6 @@
 <div>
     <x-slot:title>
-        {{ data_get_str($server, 'name')->limit(10) }} > Metrics | Coolify
+        {{ data_get_str($server, 'name')->limit(10) }} > {{ __('server.metrics_title') }} | Coolify
     </x-slot>
 
     <livewire:server.navbar :server="$server" />
@@ -18,54 +18,54 @@
                     <x-unsaved-bar action="saveMetricsSettings"
                         targets="sentinelMetricsRefreshRateSeconds,sentinelMetricsHistoryDays,sentinelPushIntervalSeconds" />
 
-                    <x-application.settings-section id="server-metrics-overview-section" title="Metrics"
-                        helper="Inspect recent CPU and memory usage reported by Sentinel.">
+                    <x-application.settings-section id="server-metrics-overview-section" :title="__('server.metrics_title')"
+                        :helper="__('server.metrics_helper')">
                         <x-slot:actions>
                             <div class="flex items-center gap-2">
-                                <x-status-badge :status="$poll ? 'Live updates' : 'Historical range'"
+                                <x-status-badge :status="$poll ? __('server.metrics_live') : __('server.metrics_historical')"
                                     :type="$poll ? 'success' : 'neutral'" />
                                 <x-forms.button canGate="update" :canResource="$server" wire:click="toggleMetrics">
-                                    Disable metrics
+                                    {{ __('server.metrics_disable') }}
                                 </x-forms.button>
                             </div>
                         </x-slot:actions>
 
                         <div class="grid gap-4 lg:grid-cols-3">
                             <x-forms.input canGate="update" :canResource="$server" type="number" min="1"
-                                id="sentinelMetricsRefreshRateSeconds" label="Collection rate" required
-                                helper="Seconds between metric samples." />
+                                id="sentinelMetricsRefreshRateSeconds" :label="__('server.metrics_collection_rate')" required
+                                :helper="__('server.metrics_collection_rate_helper')" />
                             <x-forms.input canGate="update" :canResource="$server" type="number" min="1"
-                                id="sentinelMetricsHistoryDays" label="History retention" required
-                                helper="Days of CPU and memory history to retain." />
+                                id="sentinelMetricsHistoryDays" :label="__('server.metrics_history_retention')" required
+                                :helper="__('server.metrics_history_helper')" />
                             <x-forms.input canGate="update" :canResource="$server" type="number" min="10"
-                                id="sentinelPushIntervalSeconds" label="Push interval" required
-                                helper="Seconds between health reports sent to Coolify." />
+                                id="sentinelPushIntervalSeconds" :label="__('server.metrics_push_interval')" required
+                                :helper="__('server.metrics_push_helper')" />
                         </div>
 
                         <div class="mt-4 max-w-xs">
-                            <x-forms.listbox id="interval" label="Time range" onChange="setInterval" :options="[
-                                ['value' => 5, 'label' => 'Last 5 minutes · live'],
-                                ['value' => 10, 'label' => 'Last 10 minutes · live'],
-                                ['value' => 30, 'label' => 'Last 30 minutes'],
-                                ['value' => 60, 'label' => 'Last hour'],
-                                ['value' => 720, 'label' => 'Last 12 hours'],
-                                ['value' => 10080, 'label' => 'Last week'],
-                                ['value' => 43200, 'label' => 'Last 30 days'],
+                            <x-forms.listbox id="interval" :label="__('server.metrics_time_range')" onChange="setInterval" :options="[
+                                ['value' => 5, 'label' => __('server.metrics_range_5m_live')],
+                                ['value' => 10, 'label' => __('server.metrics_range_10m_live')],
+                                ['value' => 30, 'label' => __('server.metrics_range_30m')],
+                                ['value' => 60, 'label' => __('server.metrics_range_1h')],
+                                ['value' => 720, 'label' => __('server.metrics_range_12h')],
+                                ['value' => 10080, 'label' => __('server.metrics_range_1w')],
+                                ['value' => 43200, 'label' => __('server.metrics_range_30d')],
                             ]" />
                         </div>
                         <p class="mt-3 text-xs leading-5 text-neutral-500 dark:text-fg-dim">
-                            Five and ten minute ranges refresh automatically every five seconds.
+                            {{ __('server.metrics_live_refresh_note') }}
                         </p>
                     </x-application.settings-section>
                 </form>
 
-                <x-application.settings-section id="server-cpu-metrics-section" title="CPU usage"
-                    helper="Percentage of available CPU capacity used by this server.">
+                <x-application.settings-section id="server-cpu-metrics-section" :title="__('server.metrics_cpu_title')"
+                    :helper="__('server.metrics_cpu_helper')">
                     <div wire:ignore id="{!! $chartId !!}-cpu" class="min-h-[240px] w-full"></div>
                 </x-application.settings-section>
 
-                <x-application.settings-section id="server-memory-metrics-section" title="Memory usage"
-                    helper="Percentage of physical memory currently used by this server.">
+                <x-application.settings-section id="server-memory-metrics-section" :title="__('server.metrics_memory_title')"
+                    :helper="__('server.metrics_memory_helper')">
                     <div wire:ignore id="{!! $chartId !!}-memory" class="min-h-[240px] w-full"></div>
                 </x-application.settings-section>
 
@@ -190,11 +190,11 @@
 
                             const cpuChart = new ApexCharts(
                                 document.getElementById('{!! $chartId !!}-cpu'),
-                                chartOptions('CPU', cpuColor, 'Loading CPU metrics…'),
+                                chartOptions('{{ __('server.metrics_cpu') }}', cpuColor, '{{ __('server.metrics_loading_cpu') }}'),
                             );
                             const memoryChart = new ApexCharts(
                                 document.getElementById('{!! $chartId !!}-memory'),
-                                chartOptions('Memory', ramColor, 'Loading memory metrics…'),
+                                chartOptions('{{ __('server.metrics_memory') }}', ramColor, '{{ __('server.metrics_loading_memory') }}'),
                             );
 
                             cpuChart.render();
@@ -232,7 +232,7 @@
                                         },
                                     },
                                     noData: {
-                                        text: 'No CPU metrics available',
+                                        text: '{{ __('server.metrics_no_cpu_data') }}',
                                         style: {
                                             color: textColor,
                                         },
@@ -266,7 +266,7 @@
                                         },
                                     },
                                     noData: {
-                                        text: 'No memory metrics available',
+                                        text: '{{ __('server.metrics_no_memory_data') }}',
                                         style: {
                                             color: textColor,
                                         },
@@ -277,30 +277,30 @@
                     </script>
                 @endscript
             @elseif ($server->isSentinelEnabled())
-                <x-application.settings-section id="server-metrics-overview-section" title="Metrics"
-                    helper="Inspect recent CPU and memory usage reported by Sentinel.">
-                    <x-empty size="sm" title="Metrics are disabled"
-                        description="Enable metrics to begin collecting CPU and memory history for this server."
+                <x-application.settings-section id="server-metrics-overview-section" :title="__('server.metrics_title')"
+                    :helper="__('server.metrics_helper')">
+                    <x-empty size="sm" :title="__('server.metrics_disabled_title')"
+                        :description="__('server.metrics_disabled_description')"
                         icon-name="dashboard">
                         <x-slot:contents>
                             <x-forms.button canGate="update" :canResource="$server" isHighlighted
                                 wire:click="toggleMetrics">
-                                Enable metrics
+                                {{ __('server.metrics_enable') }}
                             </x-forms.button>
                         </x-slot:contents>
                     </x-empty>
                 </x-application.settings-section>
             @else
-                <x-application.settings-section id="server-metrics-overview-section" title="Metrics"
-                    helper="Inspect recent CPU and memory usage reported by Sentinel.">
-                    <x-empty size="sm" title="Metrics unavailable"
-                        description="Sentinel metrics are unavailable on build and Swarm servers."
+                <x-application.settings-section id="server-metrics-overview-section" :title="__('server.metrics_title')"
+                    :helper="__('server.metrics_helper')">
+                    <x-empty size="sm" :title="__('server.metrics_unavailable_title')"
+                        :description="__('server.metrics_unavailable_description')"
                         icon-name="dashboard">
                         <x-slot:contents>
                             <a class="button"
                                 href="{{ route('server.sentinel', ['server_uuid' => $server->uuid]) }}"
                                 {{ wireNavigate() }}>
-                                View Sentinel
+                                {{ __('server.metrics_view_sentinel') }}
                                 <x-external-link />
                             </a>
                         </x-slot:contents>

@@ -1,6 +1,6 @@
 <div>
     <x-slot:title>
-        {{ data_get_str($server, 'name')->limit(10) }} > GitHub Runners | Coolify
+        {{ data_get_str($server, 'name')->limit(10) }} > {{ __('server.menu_github_runners') }} | Coolify
     </x-slot>
 
     <livewire:server.navbar :server="$server" />
@@ -11,38 +11,37 @@
 
         <div class="application-settings-form flex w-full flex-col gap-6">
             @if (!$server->isBuildServer())
-                <x-application.settings-section id="github-runners-section" title="GitHub Actions runners"
-                    helper="Each workflow job runs in a new container that is deleted after the job.">
+                <x-application.settings-section id="github-runners-section" :title="__('server.gh_title')"
+                    :helper="__('server.gh_helper')">
                     <x-slot:actions>
                         <x-beta-badge />
                         <a class="button" href="{{ route('server.show', ['server_uuid' => $server->uuid]) }}"
                             {{ wireNavigate() }}>
-                            General settings
+                            {{ __('server.gh_general_settings') }}
                             <x-external-link />
                         </a>
                     </x-slot:actions>
-                    <x-empty size="sm" title="This server is not enabled for builds"
-                        description="GitHub Actions runners only run on servers with the Builds only role. Change the server role in the General settings."
+                    <x-empty size="sm" :title="__('server.gh_not_build_server_title')"
+                        :description="__('server.gh_not_build_server_description')"
                         icon-name="play-circle" />
                 </x-application.settings-section>
             @elseif ($this->githubApps->isEmpty())
-                <x-callout type="info" title="No organization GitHub App">
-                    Runners are registered at organization level. Add a GitHub App that belongs to an organization
-                    under Sources, and select "Run workflow jobs on build servers" when you register it.
+                <x-callout type="info" :title="__('server.gh_no_app_title')">
+                    {{ __('server.gh_no_app_description') }}
                 </x-callout>
             @elseif (! $this->config?->is_enabled)
-                <x-application.settings-section id="github-runners-section" title="GitHub Actions runners"
-                    helper="Each workflow job runs in a new container that is deleted after the job.">
+                <x-application.settings-section id="github-runners-section" :title="__('server.gh_title')"
+                    :helper="__('server.gh_helper')">
                     <x-slot:actions>
                         <x-beta-badge />
                     </x-slot:actions>
-                    <x-empty size="sm" title="Runners are disabled"
-                        description="Enable runners to take GitHub Actions workflow jobs on this server."
+                    <x-empty size="sm" :title="__('server.gh_disabled_title')"
+                        :description="__('server.gh_disabled_description')"
                         icon-name="play-circle">
                         <x-slot:contents>
                             <x-forms.button canGate="update" :canResource="$server" isHighlighted
                                 wire:click="toggleEnabled" wire:loading.attr="disabled" wire:target="toggleEnabled">
-                                Enable runners
+                                {{ __('server.gh_enable_runners') }}
                             </x-forms.button>
                         </x-slot:contents>
                     </x-empty>
@@ -51,36 +50,32 @@
                 <form wire:submit="submit" class="contents">
                     <x-unsaved-bar action="submit"
                         targets="githubAppId,labels,maxRunners,dockerMode,runnerImage,cpuLimit,memoryLimit,capacityWaitTimeout,idleTimeout,jobTimeout,isDedicated,allowPullRequests" />
-                    <x-application.settings-section id="github-runners-section" title="GitHub Actions runners"
-                        helper="Each workflow job runs in a new container that is deleted after the job. Use runs-on: [self-hosted, <your label>] in the workflow.">
+                    <x-application.settings-section id="github-runners-section" :title="__('server.gh_title')"
+                        :helper="__('server.gh_helper_runs_on')">
                         <x-slot:actions>
                             <x-beta-badge />
                             @can('update', $server)
                                 <x-forms.button wire:click="toggleEnabled" wire:loading.attr="disabled"
                                     wire:target="toggleEnabled">
-                                    Disable runners
+                                    {{ __('server.gh_disable_runners') }}
                                 </x-forms.button>
                             @endcan
                         </x-slot:actions>
 
                         <div x-cloak x-show="$wire.dockerMode === 'dind'">
-                            <x-callout type="warning" title="Use only for trusted repositories">
-                                In the privileged Docker mode, a malicious workflow can take control of this server.
-                                Use Isolated Docker (Sysbox) or No Docker to keep jobs away from the server. Every
-                                repository of the organization can use these runners, public ones too.
+                            <x-callout type="warning" :title="__('server.gh_dind_warning_title')">
+                                {{ __('server.gh_dind_warning_text') }}
                             </x-callout>
                         </div>
                         <div x-cloak x-show="$wire.allowPullRequests" class="mt-4">
-                            <x-callout type="warning" title="Pull request jobs run on this server">
-                                In a public repository, anyone can open a pull request and change its workflow. Turn
-                                on approval for fork pull request workflows in the organization's Actions settings on
-                                GitHub, and do not use the privileged Docker mode.
+                            <x-callout type="warning" :title="__('server.gh_pr_warning_title')">
+                                {{ __('server.gh_pr_warning_text') }}
                             </x-callout>
                         </div>
 
                         @if ($this->selectedApp && $this->selectedApp->missingRunnerRequirements() !== [])
-                            <x-callout type="danger" title="The GitHub App is not ready" class="mt-4">
-                                Update the App on GitHub, then click Refetch on the App's Permissions page. Missing:
+                            <x-callout type="danger" :title="__('server.gh_app_not_ready_title')" class="mt-4">
+                                {{ __('server.gh_app_not_ready_text') }}
                                 <ul class="mt-1 list-disc pl-4">
                                     @foreach ($this->selectedApp->missingRunnerRequirements() as $requirement)
                                         <li>{{ $requirement }}</li>
@@ -90,108 +85,105 @@
                         @endif
 
                         <div class="mt-4 grid gap-4 lg:grid-cols-2">
-                            <x-forms.listbox id="githubAppId" label="GitHub App" required canGate="update"
+                            <x-forms.listbox id="githubAppId" :label="__('server.gh_app_label')" required canGate="update"
                                 :canResource="$server" :options="$this->githubApps
                                     ->map(fn($app) => ['value' => $app->id, 'label' => $app->name . ' (' . $app->organization . ')'])
                                     ->values()
                                     ->all()"
-                                helper="Organization GitHub App that receives the Workflow job webhook events." />
-                            <x-forms.input id="labels" label="Labels" required canGate="update" :canResource="$server"
+                                :helper="__('server.gh_app_helper')" />
+                            <x-forms.input id="labels" :label="__('server.gh_labels_label')" required canGate="update" :canResource="$server"
                                 placeholder="coolify"
-                                helper="Comma-separated custom labels. Coolify also registers self-hosted and linux. Jobs must ask for at least one custom label." />
-                            <x-forms.listbox id="isDedicated" label="Application builds" canGate="update"
+                                :helper="__('server.gh_labels_helper')" />
+                            <x-forms.listbox id="isDedicated" :label="__('server.gh_builds_label')" canGate="update"
                                 :canResource="$server" :options="[
-                                    ['value' => false, 'label' => 'Also build applications'],
-                                    ['value' => true, 'label' => 'Dedicated to runners'],
+                                    ['value' => false, 'label' => __('server.gh_builds_also')],
+                                    ['value' => true, 'label' => __('server.gh_builds_dedicated')],
                                 ]"
-                                helper="Dedicated servers are not used for application builds while runners are enabled." />
-                            <x-forms.listbox id="allowPullRequests" label="Pull request jobs" canGate="update"
+                                :helper="__('server.gh_builds_helper')" />
+                            <x-forms.listbox id="allowPullRequests" :label="__('server.gh_pr_label')" canGate="update"
                                 :canResource="$server" :options="[
-                                    ['value' => false, 'label' => 'Refuse pull request jobs'],
-                                    ['value' => true, 'label' => 'Run pull request jobs'],
+                                    ['value' => false, 'label' => __('server.gh_pr_refuse')],
+                                    ['value' => true, 'label' => __('server.gh_pr_run')],
                                 ]"
-                                helper="Runners fail jobs that a pull request started (pull_request, pull_request_target, and review events) before any step runs. Push, schedule, and manual jobs always run. Applies to runners that start after you save." />
+                                :helper="__('server.gh_pr_helper')" />
                         </div>
                     </x-application.settings-section>
 
-                    <x-application.settings-section id="github-runners-resources-section" title="Resources"
-                        helper="Limits apply to the runner container and to its Docker sidecar.">
+                    <x-application.settings-section id="github-runners-resources-section" :title="__('server.menu_resources')"
+                        :helper="__('server.gh_resources_helper')">
                         <div class="grid gap-4 lg:grid-cols-3">
-                            <x-forms.input id="maxRunners" type="number" min="1" max="32" label="Parallel runners"
+                            <x-forms.input id="maxRunners" type="number" min="1" max="32" :label="__('server.gh_parallel_label')"
                                 required canGate="update" :canResource="$server"
-                                helper="Jobs wait in the queue when all runners are busy." />
-                            <x-forms.input id="cpuLimit" label="CPU limit" placeholder="2" canGate="update"
-                                :canResource="$server" helper="Number of CPUs for each runner. Empty means no limit." />
-                            <x-forms.input id="memoryLimit" label="Memory limit" placeholder="4g" canGate="update"
-                                :canResource="$server" helper="Memory for each runner, for example 4g. Empty means no limit." />
-                            <x-forms.listbox id="dockerMode" label="Docker in jobs" canGate="update"
+                                :helper="__('server.gh_parallel_helper')" />
+                            <x-forms.input id="cpuLimit" :label="__('server.gh_cpu_limit')" placeholder="2" canGate="update"
+                                :canResource="$server" :helper="__('server.gh_cpu_limit_helper')" />
+                            <x-forms.input id="memoryLimit" :label="__('server.gh_memory_limit')" placeholder="4g" canGate="update"
+                                :canResource="$server" :helper="__('server.gh_memory_limit_helper')" />
+                            <x-forms.listbox id="dockerMode" :label="__('server.gh_docker_mode_label')" canGate="update"
                                 :canResource="$server" :options="[
-                                    ['value' => 'dind', 'label' => 'Docker (privileged, full host access)'],
-                                    ['value' => 'sysbox', 'label' => 'Isolated Docker (Sysbox)'],
-                                    ['value' => 'none', 'label' => 'No Docker (isolated, no container actions)'],
+                                    ['value' => 'dind', 'label' => __('server.gh_docker_dind')],
+                                    ['value' => 'sysbox', 'label' => __('server.gh_docker_sysbox')],
+                                    ['value' => 'none', 'label' => __('server.gh_docker_none')],
                                 ]"
-                                helper="Docker: each job gets a private Docker daemon. The daemon runs privileged, so a job can get root access to this server. Use it only for trusted repositories.<br><br>Isolated Docker: each job gets a private Docker daemon in an unprivileged Sysbox container. Everything that needs Docker works, and root in the job has no rights on this server. Needs Sysbox on the server.<br><br>No Docker: jobs run in an unprivileged container. JavaScript actions, composite actions, and shell steps work. Docker container actions, services, container jobs, and docker commands fail.<br><br>The host Docker socket is never shared." />
-                            <x-forms.input id="runnerImage" label="Runner image" canGate="update" :canResource="$server"
+                                :helper="__('server.gh_docker_mode_helper')" />
+                            <x-forms.input id="runnerImage" :label="__('server.gh_runner_image')" canGate="update" :canResource="$server"
                                 :placeholder="config('constants.github_runner.image')"
-                                helper="Empty uses the latest official runner image, which Coolify pulls for every runner. Set a tag, for example ghcr.io/actions/actions-runner:2.337.0, to pin a version, or use a custom image based on the official one to add tools. GitHub stops sending jobs to runners that are more than 30 days old." />
+                                :helper="__('server.gh_runner_image_helper')" />
                         </div>
                         <div x-cloak x-show="$wire.dockerMode === 'sysbox'" class="mt-4"
                             x-effect="if ($wire.dockerMode === 'sysbox' && $wire.isSysboxInstalled === null) $wire.checkSysbox()">
                             @if ($isSysboxInstalled === true)
-                                <x-callout type="success" title="Sysbox is installed">
-                                    Jobs get a private Docker daemon in an unprivileged container.
+                                <x-callout type="success" :title="__('server.gh_sysbox_installed_title')">
+                                    {{ __('server.gh_sysbox_installed_text') }}
                                 </x-callout>
                             @elseif ($isSysboxInstalled === false)
-                                <x-callout type="warning" title="Sysbox is not installed">
-                                    Isolated Docker needs the Sysbox runtime. Coolify installs Sysbox
-                                    {{ config('constants.github_runner.sysbox.version') }} from the official package
-                                    (Debian and Ubuntu, kernel 5.12 or newer). Docker reloads its configuration, and
-                                    running containers are not restarted.
+                                <x-callout type="warning" :title="__('server.gh_sysbox_missing_title')">
+                                    {{ __('server.gh_sysbox_missing_text', ['version' => config('constants.github_runner.sysbox.version')]) }}
                                     @can('update', $server)
                                         <div class="mt-3">
                                             <x-forms.button type="button" wire:click="installSysbox"
                                                 wire:loading.attr="disabled" wire:target="installSysbox">
-                                                Install Sysbox
+                                                {{ __('server.gh_install_sysbox') }}
                                             </x-forms.button>
                                         </div>
                                     @endcan
                                 </x-callout>
                             @else
-                                <x-callout type="info" title="Checking Sysbox">
-                                    Coolify checks if Sysbox is installed on this server.
+                                <x-callout type="info" :title="__('server.gh_sysbox_checking_title')">
+                                    {{ __('server.gh_sysbox_checking_text') }}
                                 </x-callout>
                             @endif
                         </div>
                     </x-application.settings-section>
 
-                    <x-application.settings-section id="github-runners-timeouts-section" title="Timeouts"
-                        helper="All values are in minutes.">
+                    <x-application.settings-section id="github-runners-timeouts-section" :title="__('server.gh_timeouts_title')"
+                        :helper="__('server.gh_timeouts_helper')">
                         <div class="grid gap-4 lg:grid-cols-3">
                             <x-forms.input id="capacityWaitTimeout" type="number" min="1" max="1440"
-                                label="Queue wait" required canGate="update" :canResource="$server"
-                                helper="A job that waits longer for a free runner is dropped." />
-                            <x-forms.input id="idleTimeout" type="number" min="1" max="1440" label="Idle runner"
+                                :label="__('server.gh_queue_wait')" required canGate="update" :canResource="$server"
+                                :helper="__('server.gh_queue_wait_helper')" />
+                            <x-forms.input id="idleTimeout" type="number" min="1" max="1440" :label="__('server.gh_idle_runner')"
                                 required canGate="update" :canResource="$server"
-                                helper="A runner that gets no job in this time is removed." />
-                            <x-forms.input id="jobTimeout" type="number" min="1" max="7200" label="Job" required
+                                :helper="__('server.gh_idle_runner_helper')" />
+                            <x-forms.input id="jobTimeout" type="number" min="1" max="7200" :label="__('server.gh_job_label')" required
                                 canGate="update" :canResource="$server"
-                                helper="A job that runs longer is stopped." />
+                                :helper="__('server.gh_job_helper')" />
                         </div>
                     </x-application.settings-section>
                 </form>
                 @can('update', $server)
                     <x-process-dialog @sysbox-install-started.window="processDialogOpen = true" closeWithX size="xl">
-                        <x-slot:title>Install Sysbox</x-slot:title>
+                        <x-slot:title>{{ __('server.gh_install_sysbox') }}</x-slot:title>
                         <x-slot:content>
-                            <livewire:activity-monitor header="Logs" fullHeight />
+                            <livewire:activity-monitor :header="__('server.sub_logs')" fullHeight />
                         </x-slot:content>
                     </x-process-dialog>
                 @endcan
             @endif
 
             @if ($server->isBuildServer() && $this->config?->is_enabled)
-                <x-application.settings-section id="github-runners-executions-section" title="Recent runners"
-                    helper="Queued jobs, active runners, and their results. The list updates every 10 seconds." flush>
+                <x-application.settings-section id="github-runners-executions-section" :title="__('server.gh_recent_title')"
+                    :helper="__('server.gh_recent_helper')" flush>
                     <livewire:server.github-runner-executions :server="$server" />
                 </x-application.settings-section>
             @endif
