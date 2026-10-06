@@ -1,14 +1,14 @@
 <div class="w-full">
     <x-slot:title>
-        New Server | Coolify
+        {{ __('server.create.title') }} | Coolify
     </x-slot>
 
     <div class="mb-5 flex min-h-9 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 class="min-w-0 text-[24px]! leading-7! font-semibold! tracking-tight!">New server</h1>
+        <h1 class="min-w-0 text-[24px]! leading-7! font-semibold! tracking-tight!">{{ __('server.create.heading') }}</h1>
         <div class="flex flex-wrap items-center gap-2">
             @if ($selectedType)
                 <a href="{{ route('server.create') }}" class="button" {{ wireNavigate() }}>
-                    Change method
+                    {{ __('server.create.change_method') }}
                 </a>
             @endif
         </div>
@@ -18,8 +18,8 @@
         <div class="application-settings-form flex flex-col gap-6">
             <section class="application-settings-section">
                 <div class="application-settings-section-header">
-                    <h2 class="application-settings-section-title">Add a server</h2>
-                    <p class="application-settings-section-description">Connect a server you already manage.</p>
+                    <h2 class="application-settings-section-title">{{ __('server.create.add_title') }}</h2>
+                    <p class="application-settings-section-description">{{ __('server.create.add_description') }}</p>
                 </div>
                 <div class="application-settings-section-body is-flush">
                     <div class="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -33,9 +33,9 @@
                                 </span>
                             </div>
                             <div class="mt-auto pt-5">
-                                <h3 class="text-[13px]! font-semibold! text-black dark:text-fg">IP address or domain</h3>
+                                <h3 class="text-[13px]! font-semibold! text-black dark:text-fg">{{ __('server.create.ip_card_title') }}</h3>
                                 <p class="mt-1 text-[11px] leading-4 text-neutral-500 dark:text-fg-faint">
-                                    Connect an existing server over SSH.
+                                    {{ __('server.create.ip_card_description') }}
                                 </p>
                             </div>
                         </a>
@@ -46,8 +46,8 @@
             @can('viewAny', App\Models\CloudProviderToken::class)
                 <section class="application-settings-section">
                     <div class="application-settings-section-header">
-                        <h2 class="application-settings-section-title">Provision a server</h2>
-                        <p class="application-settings-section-description">Create a server with a cloud provider.</p>
+                        <h2 class="application-settings-section-title">{{ __('server.create.provision_title') }}</h2>
+                        <p class="application-settings-section-description">{{ __('server.create.provision_description') }}</p>
                     </div>
                     <div class="application-settings-section-body is-flush">
                         <div class="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -60,7 +60,7 @@
                                 <div class="mt-auto pt-5">
                                     <h3 class="text-[13px]! font-semibold! text-black dark:text-fg">Hetzner</h3>
                                     <p class="mt-1 text-[11px] leading-4 text-neutral-500 dark:text-fg-faint">
-                                        Provision from Hetzner Cloud.
+                                        {{ __('server.create.hetzner_card_description') }}
                                     </p>
                                 </div>
                             </a>
@@ -75,7 +75,7 @@
                                 <div class="mt-auto pt-5">
                                     <h3 class="text-[13px]! font-semibold! text-black dark:text-fg">Vultr</h3>
                                     <p class="mt-1 text-[11px] leading-4 text-neutral-500 dark:text-fg-faint">
-                                        Provision from Vultr Cloud.
+                                        {{ __('server.create.vultr_card_description') }}
                                     </p>
                                 </div>
                             </a>
@@ -89,7 +89,7 @@
                                 <div class="mt-auto pt-5">
                                     <h3 class="text-[13px]! font-semibold! text-black dark:text-fg">DigitalOcean</h3>
                                     <p class="mt-1 text-[11px] leading-4 text-neutral-500 dark:text-fg-faint">
-                                        Provision a new Droplet.
+                                        {{ __('server.create.do_card_description') }}
                                     </p>
                                 </div>
                             </a>

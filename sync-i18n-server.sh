@@ -9,6 +9,9 @@ docker cp resources/views/livewire/server/index.blade.php coolify:/var/www/html/
 docker cp resources/views/livewire/server/show.blade.php coolify:/var/www/html/resources/views/livewire/server/show.blade.php
 docker cp resources/views/livewire/server/partials/server-details.blade.php coolify:/var/www/html/resources/views/livewire/server/partials/server-details.blade.php
 docker cp resources/views/livewire/server/partials/localhost-general.blade.php coolify:/var/www/html/resources/views/livewire/server/partials/localhost-general.blade.php
+docker cp resources/views/livewire/server/create.blade.php coolify:/var/www/html/resources/views/livewire/server/create.blade.php
+docker cp resources/views/livewire/server/new/by-ip.blade.php coolify:/var/www/html/resources/views/livewire/server/new/by-ip.blade.php
+docker cp resources/views/components/limit-reached.blade.php coolify:/var/www/html/resources/views/components/limit-reached.blade.php
 docker cp lang/zh-cn.json coolify:/var/www/html/lang/zh-cn.json
 docker cp lang/en.json coolify:/var/www/html/lang/en.json
 
