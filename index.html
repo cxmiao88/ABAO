@@ -45,8 +45,12 @@ img{max-width:100%;display:block}
 .hero h1{font-size:52px;font-weight:900;letter-spacing:1px;line-height:1.25;margin-bottom:16px}
 .hero h1 span{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
 .hero p.sub{font-size:18px;color:var(--muted);max-width:640px;margin:0 auto 34px}
-.install-box{background:rgba(17,28,49,.85);border:1px solid var(--line);border-radius:14px;padding:10px 10px 10px 20px;display:flex;align-items:center;gap:14px;max-width:680px;margin:0 auto 18px;text-align:left;backdrop-filter:blur(8px)}
-.install-box code{flex:1;font-family:Consolas,'Courier New',monospace;font-size:13.5px;color:#a5f3fc;white-space:nowrap;overflow-x:auto;padding:8px 0}
+.install-box{background:rgba(17,28,49,.85);border:1px solid var(--line);border-radius:14px;padding:12px;max-width:720px;margin:0 auto 18px;text-align:left;backdrop-filter:blur(8px)}
+.install-tabs{display:flex;gap:8px;margin-bottom:10px}
+.itab{flex:1;background:var(--panel2);border:1px solid var(--line);color:var(--muted);padding:8px 0;border-radius:8px;font-size:13px;cursor:pointer;transition:all .2s}
+.itab.active{border-color:rgba(56,189,248,.5);color:var(--accent);background:rgba(56,189,248,.08)}
+.install-row{display:flex;align-items:center;gap:14px}
+.install-row code{flex:1;font-family:Consolas,'Courier New',monospace;font-size:13px;color:#a5f3fc;white-space:nowrap;overflow-x:auto;padding:8px 4px}
 .copy-btn{flex-shrink:0;padding:10px 22px}
 .hero .tips{font-size:13px;color:var(--dim)}
 .hero-stats{display:flex;gap:0;justify-content:center;margin-top:52px;border:1px solid var(--line);border-radius:14px;background:rgba(17,28,49,.6);overflow:hidden;max-width:720px;margin-left:auto;margin-right:auto}
@@ -151,6 +155,8 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;background:var(--bg2
   .hero h1{font-size:34px}
   .hero p.sub{font-size:15px}
   .install-box{flex-direction:column;align-items:stretch;padding:16px}
+  .install-row{flex-direction:column;align-items:stretch}
+  .install-row code{white-space:normal;word-break:break-all}
   .copy-btn{justify-content:center}
   .hero-stats{flex-direction:column}
   .stat + .stat{border-left:none;border-top:1px solid var(--line)}
@@ -194,10 +200,16 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;background:var(--bg2
     <h1>一站式服务器管理面板<br><span>ABao 阿宝面板</span></h1>
     <p class="sub">一条命令，全自动安装。应用部署、网站、数据库、SSL、文件、监控，像管理宝塔一样简单，同时拥有 Heroku 级应用编排能力。</p>
     <div class="install-box">
-      <code id="installCmd">curl -fsSL https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash</code>
-      <button class="btn btn-primary copy-btn" id="copyBtn">复制安装命令</button>
+      <div class="install-tabs">
+        <button class="itab active" data-cmd="curl -fsSL https://cdn.jsdelivr.net/gh/cxmiao88/ABAO@main/install.sh | bash">🇨🇳 国内镜像（推荐）</button>
+        <button class="itab" data-cmd="curl -fsSL https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash">🌐 海外直连</button>
+      </div>
+      <div class="install-row">
+        <code id="installCmd">curl -fsSL https://cdn.jsdelivr.net/gh/cxmiao88/ABAO@main/install.sh | bash</code>
+        <button class="btn btn-primary copy-btn" id="copyBtn">复制安装命令</button>
+      </div>
     </div>
-    <div class="tips">支持 Ubuntu / Debian / CentOS / Rocky / AlmaLinux · 2 核 2G 起 · 安装仅需一次交互</div>
+    <div class="tips">国内服务器若安装中卡住，脚本已内置阿里云 Docker 源与 ghproxy 加速 · 2 核 2G 起 · 全程自动无交互</div>
     <div class="hero-stats">
       <div class="stat"><b>2</b><span>后端整合</span></div>
       <div class="stat"><b>100+</b><span>管理功能</span></div>
@@ -410,6 +422,10 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;background:var(--bg2
     </div>
     <div class="faq">
       <div class="faq-item">
+        <button class="faq-q">国内服务器安装很慢或卡住怎么办？<span class="arrow">▾</span></button>
+        <div class="faq-a">用「国内镜像」命令安装（页面顶部复制按钮，走 jsdelivr CDN）。脚本内部也已针对国内网络优化：Docker 走阿里云源、源码与前端下载自动切换到 ghproxy 加速通道、mdserver-web 走 jsdelivr。若某个环节仍超时，脚本会明确提示原因，并可在 120 秒后自动重试。</div>
+      </div>
+      <div class="faq-item">
         <button class="faq-q">ABao 与 Coolify / mdserver-web 是什么关系？<span class="arrow">▾</span></button>
         <div class="faq-a">ABao 是一个整合型面板：保留 Coolify（应用部署编排）与 mdserver-web（宝塔式主机管理）两个开源后端，用全新的 Vue 前端统一接管。安装后只需记住一个地址、一套账号。</div>
       </div>
@@ -483,9 +499,10 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;background:var(--bg2
 
 <script>
 (function(){
-  var cmd = document.getElementById('installCmd').textContent;
+  var cmdEl = document.getElementById('installCmd');
   var toast = document.getElementById('toast');
   var toastTimer = null;
+  var currentCmd = cmdEl.textContent;
   function showToast(){
     toast.classList.add('show');
     if (toastTimer) clearTimeout(toastTimer);
@@ -496,7 +513,7 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;background:var(--bg2
       showToast();
     };
     if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(cmd).then(done, function(){
+      navigator.clipboard.writeText(currentCmd).then(done, function(){
         fallbackCopy();
       });
     } else {
@@ -505,7 +522,7 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;background:var(--bg2
   }
   function fallbackCopy(){
     var ta = document.createElement('textarea');
-    ta.value = cmd;
+    ta.value = currentCmd;
     ta.style.position = 'fixed';
     ta.style.opacity = '0';
     document.body.appendChild(ta);
@@ -514,6 +531,14 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;background:var(--bg2
     document.body.removeChild(ta);
     showToast();
   }
+  document.querySelectorAll('.itab').forEach(function(tab){
+    tab.addEventListener('click', function(){
+      document.querySelectorAll('.itab').forEach(function(t){ t.classList.remove('active'); });
+      tab.classList.add('active');
+      currentCmd = tab.getAttribute('data-cmd');
+      cmdEl.textContent = currentCmd;
+    });
+  });
   document.getElementById('copyBtn').addEventListener('click', copyCmd);
   document.getElementById('ctaCopyBtn').addEventListener('click', copyCmd);
 
