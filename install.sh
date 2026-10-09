@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-#  ABao 阿宝面板 - 一键安装脚本 v2.2（2026-10-10 更新：国内全链路实测修复）
+#  ABao 阿宝面板 - 一键安装脚本 v2.3（2026-10-10 更新：CentOS 7 / RHEL9 系 Docker 源多源兜底）
 #  ---------------------------------------------------------------------------
 #  用法（root 用户执行）：
 #    curl -fsSL https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash
@@ -81,15 +81,26 @@ check_port() {
 
 # ---------- 2. Docker 安装（国内镜像优先，Compose 插件随包安装） ----------
 install_docker_rhel() {
-    local repo=/etc/yum.repos.d/docker-ce.repo
-    info "配置阿里云 Docker 源…"
-    cat > "$repo" <<'EOF'
+    local repo=/etc/yum.repos.d/docker-ce.repo relver
+    # 显式探测发行版主版本（不能依赖 yum $releasever：OpenCloudOS 展开为 9.4 会导致源 404）
+    if [ "$OS_ID" = "centos" ]; then
+        relver="$(rpm -q --qf '%{VERSION}' centos-release 2>/dev/null | cut -d. -f1 | tr -dc '0-9')"
+        [ -n "$relver" ] || relver="7"
+    else
+        relver="9"
+    fi
+    info "配置 Docker 源（centos/$relver，腾讯云 → 阿里云 → 官方 多源兜底）…"
+    cat > "$repo" <<EOF
 [docker-ce-stable]
-name=Docker CE Stable - $basearch
-baseurl=https://mirrors.aliyun.com/docker-ce/linux/centos/9/$basearch/stable
+name=Docker CE Stable - \$basearch
+baseurl=https://mirrors.cloud.tencent.com/docker-ce/linux/centos/$relver/\$basearch/stable
+        https://mirrors.aliyun.com/docker-ce/linux/centos/$relver/\$basearch/stable
+        https://download.docker.com/linux/centos/$relver/\$basearch/stable
 enabled=1
 gpgcheck=1
-gpgkey=https://mirrors.aliyun.com/docker-ce/linux/centos/gpg
+gpgkey=https://mirrors.cloud.tencent.com/docker-ce/linux/centos/gpg
+       https://mirrors.aliyun.com/docker-ce/linux/centos/gpg
+skip_if_unavailable=1
 EOF
     $PKG install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin 2>&1 | tail -5
     command -v docker >/dev/null 2>&1 || return 1
@@ -394,7 +405,7 @@ print_summary() {
 }
 
 main() {
-    info "========== ABao 阿宝面板一键安装 v2.2（国内全链路实测） =========="
+    info "========== ABao 阿宝面板一键安装 v2.3（CentOS7 / RHEL9 系兼容） =========="
     require_root
     detect_os
     check_port "$APP_PORT"
