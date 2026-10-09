@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-#  ABao 阿宝面板 - 一键安装脚本 v2.3（2026-10-10 更新：CentOS 7 / RHEL9 系 Docker 源多源兜底）
+#  ABao 阿宝面板 - 一键安装脚本 v2.4（2026-10-10 更新：CentOS7 老内核 postgres/seccomp 兼容 + 种子密码强制含数字）
 #  ---------------------------------------------------------------------------
 #  用法（root 用户执行）：
 #    curl -fsSL https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash
@@ -197,7 +197,12 @@ gen_env() {
     # 注意：Coolify RootUserSeeder 要求邮箱可 DNS 解析 + 密码含大小写/数字/符号
     local admin_email="${ABAO_ADMIN_EMAIL:-admin@qq.com}"
     local admin_pass="${ABAO_ADMIN_PASSWORD:-}"
-    [ -z "$admin_pass" ] && admin_pass="Abao@$(tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 12)"
+    # 强制含字母+数字+符号（Coolify RootUserSeeder 要求密码必须含数字；纯随机字母会被拒）
+    if [ -z "$admin_pass" ]; then
+        local rn="$(tr -dc '0-9' < /dev/urandom | head -c 2)"
+        local rl="$(tr -dc 'A-Za-z' < /dev/urandom | head -c 8)"
+        admin_pass="Abao@${rl}${rn}!"
+    fi
     local app_key="base64:$(head -c 32 /dev/urandom | base64)"
     local db_pass="$(tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 20)"
     local redis_pass="$(tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 20)"
@@ -257,6 +262,18 @@ start_coolify() {
     # Coolify compose 声明 external 网络 coolify，必须先创建（幂等）
     docker network create coolify >/dev/null 2>&1 || true
     cd "$ABAO_DIR"
+    # CentOS7/RHEL7 老内核（3.x）兼容修复：
+    #  ① postgres 换 debian/glibc 版（alpine/musl 与 3.10 内核 epoll 不兼容，容器反复 Restarting）
+    #  ② coolify 加 seccomp:unconfined（默认 seccomp 在 3.10 内核拦截 pwrite64，nginx 报
+    #     "pwrite() \"/var/run/nginx.pid\" Operation not permitted"，healthcheck 失败）
+    KERNEL_MAJOR="$(uname -r | cut -d. -f1)"
+    if [ "$KERNEL_MAJOR" = "3" ]; then
+        info "检测到 3.x 老内核，应用 CentOS7/RHEL7 兼容补丁（debian postgres + seccomp:unconfined）…"
+        sed -i 's|image: postgres:[0-9.]*-alpine|image: postgres:14|g' docker-compose.yml
+        grep -q 'seccomp:unconfined' docker-compose.prod.yml || \
+            sed -i 's|    image: "${REGISTRY_URL:-docker.io}/coollabsio/coolify:${LATEST_IMAGE:-latest}"|&\n    security_opt:\n      - "seccomp:unconfined"|' docker-compose.prod.yml
+    fi
+    docker compose -f docker-compose.yml -f docker-compose.prod.yml config -q || die "compose 配置校验失败"
     docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d 2>&1 | tail -8 || die "Coolify 容器启动失败（docker compose up -d）"
     info "等待服务就绪（最多 120 秒）…"
     local i=0
@@ -406,7 +423,7 @@ print_summary() {
 }
 
 main() {
-    info "========== ABao 阿宝面板一键安装 v2.3（CentOS7 / RHEL9 系兼容） =========="
+    info "========== ABao 阿宝面板一键安装 v2.4（CentOS7 兼容 + 种子密码修复） =========="
     require_root
     detect_os
     check_port "$APP_PORT"
