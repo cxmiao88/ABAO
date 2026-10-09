@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-#  ABao 阿宝面板 - 一键安装脚本 v2.4（2026-10-10 更新：CentOS7 老内核 postgres/seccomp 兼容 + 种子密码强制含数字）
+#  ABao 阿宝面板 - 一键安装脚本 v2.4.1（2026-10-10 更新：CentOS7 老内核 postgres/seccomp 兼容 + 种子密码强制含数字 + 幂等重跑）
 #  ---------------------------------------------------------------------------
 #  用法（root 用户执行）：
 #    curl -fsSL https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash
@@ -72,6 +72,9 @@ detect_os() {
 }
 check_port() {
     local p="$1"
+    # 本脚本已部署的服务占用端口 → 幂等重跑放行
+    if [ "$p" = "$APP_PORT" ] && command -v docker >/dev/null 2>&1 && docker ps --format '{{.Names}}' 2>/dev/null | grep -qx 'coolify'; then return 0; fi
+    if [ "$p" = "$MDSERVER_PORT" ] && [ -f /www/server/mdserver-web/start.py ]; then return 0; fi
     if command -v ss >/dev/null 2>&1; then
         ss -ltn 2>/dev/null | awk '{print $4}' | grep -qE "[:.]${p}$" && die "端口 $p 已被占用，请先释放或修改配置（APP_PORT/MDSERVER_PORT）" || return 0
     elif command -v netstat >/dev/null 2>&1; then
@@ -423,7 +426,7 @@ print_summary() {
 }
 
 main() {
-    info "========== ABao 阿宝面板一键安装 v2.4（CentOS7 兼容 + 种子密码修复） =========="
+    info "========== ABao 阿宝面板一键安装 v2.4.1（CentOS7 兼容 + 幂等重跑） =========="
     require_root
     detect_os
     check_port "$APP_PORT"
