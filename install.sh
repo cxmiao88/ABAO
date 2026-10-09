@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-#  ABao 阿宝面板 - 一键安装脚本 v2.4.1（2026-10-10 更新：CentOS7 老内核 postgres/seccomp 兼容 + 种子密码强制含数字 + 幂等重跑）
+#  ABao 阿宝面板 - 一键安装脚本 v2.4.2（2026-10-10 更新：CentOS7 兼容 + 幂等重跑保留 .env + 种子密码强制含数字）
 #  ---------------------------------------------------------------------------
 #  用法（root 用户执行）：
 #    curl -fsSL https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash
@@ -166,6 +166,13 @@ fetch_source() {
             || warn "源码更新失败（网络不可达），使用现有版本"
     else
         local zip="/tmp/abao-main.zip"
+        local env_bak=""
+        # 重跑/重装保留原 .env（账号密码/数据库密钥不变，与既有 db 数据卷兼容）
+        if [ -f "$ABAO_DIR/.env" ]; then
+            env_bak="/tmp/abao-env.bak.$$"
+            cp "$ABAO_DIR/.env" "$env_bak"
+            info "已备份现有 .env（重跑保留原账号与数据库密码）"
+        fi
         info "下载 ABao 源码到 $ABAO_DIR …"
         info "下载源码压缩包（GitHub 直连，30 秒超时）…"
         if ! curl -fSL --progress-bar --max-time 30 "$SRC_ZIP_URL" -o "$zip" 2>&1; then
@@ -179,6 +186,11 @@ fetch_source() {
         info "解压源码…"
         unzip -q "$zip" -d /tmp/abao-extract || die "源码压缩包解压失败"
         cp -r /tmp/abao-extract/ABAO-main/. "$ABAO_DIR/" 2>/dev/null || cp -r /tmp/abao-extract/*/. "$ABAO_DIR/"
+        if [ -n "$env_bak" ] && [ -f "$env_bak" ]; then
+            cp "$env_bak" "$ABAO_DIR/.env"
+            chmod 600 "$ABAO_DIR/.env"
+            info "已恢复原有 .env（账号密码不变）"
+        fi
     fi
     [ -f "$ABAO_DIR/docker-compose.prod.yml" ] || die "源码不完整：缺少 docker-compose.prod.yml"
     # config-overrides/app.php 在 .gitignore 内，zip/git 均不含；compose 挂载它覆盖容器 config/app.php，缺失会导致容器启动报 "not a directory"
@@ -426,7 +438,7 @@ print_summary() {
 }
 
 main() {
-    info "========== ABao 阿宝面板一键安装 v2.4.1（CentOS7 兼容 + 幂等重跑） =========="
+    info "========== ABao 阿宝面板一键安装 v2.4.2（CentOS7 兼容 + 幂等重跑） =========="
     require_root
     detect_os
     check_port "$APP_PORT"
