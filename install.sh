@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-#  ABao 阿宝面板 - 一键安装脚本 v2.1（2026-10-10 更新）
+#  ABao 阿宝面板 - 一键安装脚本 v2.2（2026-10-10 更新：国内全链路实测修复）
 #  ---------------------------------------------------------------------------
 #  用法（root 用户执行）：
 #    curl -fsSL https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash
@@ -166,6 +166,14 @@ fetch_source() {
         cp -r /tmp/abao-extract/ABAO-main/. "$ABAO_DIR/" 2>/dev/null || cp -r /tmp/abao-extract/*/. "$ABAO_DIR/"
     fi
     [ -f "$ABAO_DIR/docker-compose.prod.yml" ] || die "源码不完整：缺少 docker-compose.prod.yml"
+    # config-overrides/app.php 在 .gitignore 内，zip/git 均不含；compose 挂载它覆盖容器 config/app.php，缺失会导致容器启动报 "not a directory"
+    if [ ! -f "$ABAO_DIR/config-overrides/app.php" ]; then
+        mkdir -p "$ABAO_DIR/config-overrides"
+        info "生成 config-overrides/app.php（从 Coolify 镜像拷贝原始配置）…"
+        docker run --rm --entrypoint cat coollabsio/coolify:latest /var/www/html/config/app.php > "$ABAO_DIR/config-overrides/app.php" 2>/dev/null \
+            || echo '<?php return [];' > "$ABAO_DIR/config-overrides/app.php"
+        [ -f "$ABAO_DIR/config-overrides/app.php" ] && [ -s "$ABAO_DIR/config-overrides/app.php" ] || die "config-overrides/app.php 生成失败"
+    fi
     ok "源码就绪：$ABAO_DIR"
 }
 
@@ -174,9 +182,10 @@ gen_env() {
     local env_file="$ABAO_DIR/.env"
     [ -f "$env_file" ] && { warn "已存在 $env_file，跳过生成（如需重置请先删除该文件）"; return; }
     info "生成安全配置（管理员账号/数据库/Redis 密钥全部随机）…"
-    local admin_email="${ABAO_ADMIN_EMAIL:-admin@abao.local}"
+    # 注意：Coolify RootUserSeeder 要求邮箱可 DNS 解析 + 密码含大小写/数字/符号
+    local admin_email="${ABAO_ADMIN_EMAIL:-admin@qq.com}"
     local admin_pass="${ABAO_ADMIN_PASSWORD:-}"
-    [ -z "$admin_pass" ] && admin_pass="$(tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 14)"
+    [ -z "$admin_pass" ] && admin_pass="Abao@$(tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 12)"
     local app_key="base64:$(head -c 32 /dev/urandom | base64)"
     local db_pass="$(tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 20)"
     local redis_pass="$(tr -dc 'A-Za-z0-9' < /dev/urandom | head -c 20)"
@@ -326,9 +335,31 @@ install_mdserver() {
         return
     fi
     info "安装 mdserver-web（宝塔式主机管理后端，端口 ${MDSERVER_PORT}）…"
-    curl --insecure -fsSL --max-time 600 https://cdn.jsdelivr.net/gh/midoks/mdserver-web@latest/scripts/install.sh | bash \
-        || curl --insecure -fsSL --max-time 600 https://raw.githubusercontent.com/midoks/mdserver-web/dev/scripts/install.sh | bash \
-        || die "mdserver-web 安装失败（网络问题），可稍后手动重试：curl --insecure -fsSL https://cdn.jsdelivr.net/gh/midoks/mdserver-web@latest/scripts/install.sh | bash"
+    local zip="/tmp/mdserver-web.zip"
+    local urls=(
+        "https://ghfast.top/https://github.com/midoks/mdserver-web/archive/refs/heads/dev.zip"
+        "https://gh-proxy.com/https://github.com/midoks/mdserver-web/archive/refs/heads/dev.zip"
+        "https://ghproxy.net/https://github.com/midoks/mdserver-web/archive/refs/heads/dev.zip"
+        "https://github.com/midoks/mdserver-web/archive/refs/heads/dev.zip"
+    )
+    rm -f "$zip"
+    for u in "${urls[@]}"; do
+        info "下载源码：$u"
+        if curl -fSL --progress-bar --max-time 300 "$u" -o "$zip" 2>&1 && unzip -t "$zip" >/dev/null 2>&1; then
+            ok "mdserver 源码下载完成（$(du -h "$zip" | cut -f1)）"
+            break
+        fi
+        rm -f "$zip"
+    done
+    [ -f "$zip" ] || die "mdserver-web 源码下载失败（多加速源均不可达）"
+    rm -rf /tmp/mw-extract /www/server/mdserver-web
+    mkdir -p /tmp/mw-extract
+    cd /tmp/mw-extract
+    unzip -q "$zip" || die "mdserver-web 源码解压失败"
+    mv mdserver-web-dev /www/server/mdserver-web 2>/dev/null || mv mdserver-web-master /www/server/mdserver-web 2>/dev/null || die "解压目录识别失败"
+    info "运行 mdserver-web 安装脚本（自动检测环境，约 5-15 分钟，日志 /tmp/mdserver-install.log）…"
+    cd /www/server/mdserver-web
+    bash scripts/install.sh > /tmp/mdserver-install.log 2>&1 || die "mdserver-web 安装失败，查看日志：tail -80 /tmp/mdserver-install.log"
     ok "mdserver-web 安装完成"
 }
 
@@ -363,7 +394,7 @@ print_summary() {
 }
 
 main() {
-    info "========== ABao 阿宝面板一键安装 v2.1（下载全程进度显示） =========="
+    info "========== ABao 阿宝面板一键安装 v2.2（国内全链路实测） =========="
     require_root
     detect_os
     check_port "$APP_PORT"
