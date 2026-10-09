@@ -34,14 +34,6 @@
             class="flex size-5 shrink-0 items-center justify-center rounded-full bg-neutral-200 text-[11px] font-semibold text-neutral-700 dark:bg-white/[0.1] dark:text-fg">
             {{ $userInitial }}
         </span>
-        @if ($sidebar)
-            <span class="min-w-0 truncate text-xs font-medium" :class="collapsed && 'hidden'">{{ $userName }}</span>
-        @endif
-        <svg class="size-3.5 shrink-0 text-neutral-400 dark:text-fg-faint transition-transform"
-            :class="[open && 'rotate-180', {{ $sidebar ? "collapsed && 'hidden'" : 'false' }}]"
-            viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-        </svg>
     </button>
 
     <div x-show="open" x-cloak
@@ -65,14 +57,14 @@
         <a href="{{ route('profile') }}" {{ wireNavigate() }} class="listbox-option">
             <span class="flex items-center gap-2">
                 <x-reicon name="profile" class="size-4 opacity-80" />
-                Profile
+                {{ __('prof_menu_profile') }}
             </span>
         </a>
         <button type="button" class="listbox-option w-full" @click="appearanceOpen = !appearanceOpen"
             :aria-expanded="appearanceOpen">
             <span class="flex items-center gap-2">
                 <x-reicon name="settings" class="size-4 opacity-80" />
-                Appearance
+                {{ __('prof_menu_appearance') }}
             </span>
             <svg class="size-3.5 text-neutral-400 transition-transform dark:text-fg-faint"
                 :class="appearanceOpen && 'rotate-180'" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -85,13 +77,13 @@
         </div>
 
         <button type="button" class="listbox-option w-full" @click="toggleAutoCollapse()"
-            :aria-pressed="autoCollapse" title="Collapse the sidebar on pages that have a settings menu">
+            :aria-pressed="autoCollapse" title="{{ __('prof_auto_collapse_title') }}">
             <span class="flex items-center gap-2">
                 <svg class="size-4 opacity-80" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <rect x="3" y="4" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.6" />
                     <path d="M9 4v16" stroke="currentColor" stroke-width="1.6" />
                 </svg>
-                Auto-collapse sidebar
+                {{ __('prof_auto_collapse') }}
             </span>
             <svg x-show="autoCollapse" x-cloak class="size-4 shrink-0 text-black dark:text-fg" viewBox="0 0 24 24"
                 fill="none" aria-hidden="true">
@@ -106,15 +98,15 @@
         <a href="https://coolify.io/docs" target="_blank" rel="noopener noreferrer" class="listbox-option">
             <span class="flex items-center gap-2">
                 <x-reicon name="documentation" class="size-4 opacity-80" />
-                Documentation
+                {{ __('prof_menu_documentation') }}
             </span>
         </a>
-        <x-modal-input title="How can we help?">
+        <x-modal-input :title="__('prof_help_title')">
             <x-slot:content>
                 <div class="listbox-option cursor-pointer" @click="closePanel()">
                     <span class="flex items-center gap-2">
                         <x-reicon name="feedback" class="size-4 opacity-80" />
-                        Feedback
+                        {{ __('prof_menu_feedback') }}
                     </span>
                 </div>
             </x-slot:content>
@@ -125,7 +117,7 @@
                 class="listbox-option">
                 <span class="flex items-center gap-2">
                     <x-reicon name="sponsor" class="size-4 text-pink-500" />
-                    Sponsor us
+                    {{ __('prof_menu_sponsor') }}
                 </span>
             </a>
         @endif
@@ -137,7 +129,7 @@
             <button type="submit" class="listbox-option w-full text-left text-error dark:text-error">
                 <span class="flex items-center gap-2">
                     <x-reicon name="logout" class="size-4 opacity-90" />
-                    Log out
+                    {{ __('prof_menu_logout') }}
                 </span>
             </button>
         </form>

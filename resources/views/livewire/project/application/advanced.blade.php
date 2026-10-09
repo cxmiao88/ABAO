@@ -11,53 +11,53 @@
     @endphp
 
     <div class="flex flex-col gap-6">
-        <x-application.settings-section id="advanced-build-section" title="Build"
-            helper="Fine-tune how images are built for this application.">
+        <x-application.settings-section id="advanced-build-section" title="{{ __('application.adv_build_title') }}"
+            helper="{{ __('application.adv_build_helper') }}">
             <div class="grid w-full gap-4 sm:grid-cols-2">
-                <x-forms.listbox id="disableBuildCache" label="Build cache" onChange="instantSave"
-                    helper="Disabling the cache forces a completely fresh Docker build on every deployment."
+                <x-forms.listbox id="disableBuildCache" label="{{ __('application.adv_build_cache') }}" onChange="instantSave"
+                    helper="{{ __('application.adv_build_cache_helper') }}"
                     :options="[
-                        ['value' => false, 'label' => 'Use Docker build cache'],
-                        ['value' => true, 'label' => 'Rebuild from scratch every time'],
+                        ['value' => false, 'label' => __('application.adv_opt_use_cache')],
+                        ['value' => true, 'label' => __('application.adv_opt_rebuild_scratch')],
                     ]" :disabled="! $canUpdate" />
-                <x-forms.listbox id="injectBuildArgsToDockerfile" label="Build arguments" onChange="instantSave"
-                    helper="When injected automatically, Coolify adds ARG statements to your Dockerfile for build-time variables. Manage them manually to preserve Docker build cache."
+                <x-forms.listbox id="injectBuildArgsToDockerfile" label="{{ __('application.adv_build_args') }}" onChange="instantSave"
+                    helper="{{ __('application.adv_build_args_helper') }}"
                     :options="[
-                        ['value' => true, 'label' => 'Inject build args automatically'],
-                        ['value' => false, 'label' => 'Managed manually in Dockerfile'],
+                        ['value' => true, 'label' => __('application.adv_opt_inject_args')],
+                        ['value' => false, 'label' => __('application.adv_opt_manual_dockerfile')],
                     ]" :disabled="! $canUpdate" />
-                <x-forms.listbox id="includeSourceCommitInBuild" label="Source commit availability" onChange="instantSave"
-                    helper="SOURCE_COMMIT (git commit hash) is always available at runtime. Making it available during build invalidates the cache on every commit."
+                <x-forms.listbox id="includeSourceCommitInBuild" label="{{ __('application.adv_commit_availability') }}" onChange="instantSave"
+                    helper="{{ __('application.adv_commit_availability_helper') }}"
                     :options="[
-                        ['value' => false, 'label' => 'Runtime only (preserves cache)'],
-                        ['value' => true, 'label' => 'Available during build'],
+                        ['value' => false, 'label' => __('application.adv_opt_runtime_only')],
+                        ['value' => true, 'label' => __('application.adv_opt_during_build')],
                     ]" :disabled="! $canUpdate" />
             </div>
         </x-application.settings-section>
 
-        <x-application.settings-section id="advanced-container-section" title="Container"
-            helper="Control how the deployed container is named.">
+        <x-application.settings-section id="advanced-container-section" title="{{ __('application.adv_container_title') }}"
+            helper="{{ __('application.adv_container_helper') }}">
             <div class="grid w-full gap-4 sm:grid-cols-2">
-                <x-forms.listbox id="isConsistentContainerNameEnabled" label="Container naming" onChange="instantSave"
-                    helper="With a consistent name the container is always called {{ $application->uuid }}. <span class='font-bold dark:text-warning'>You will lose the rolling update feature!</span>"
+                <x-forms.listbox id="isConsistentContainerNameEnabled" label="{{ __('application.adv_container_naming') }}" onChange="instantSave"
+                    helper="{{ __('application.adv_container_naming_helper', ['uuid' => $application->uuid]) }}"
                     :options="[
-                        ['value' => false, 'label' => 'Generated name (rolling updates)'],
-                        ['value' => true, 'label' => 'Consistent name (no rolling updates)'],
+                        ['value' => false, 'label' => __('application.adv_opt_generated_name')],
+                        ['value' => true, 'label' => __('application.adv_opt_consistent_name')],
                     ]" :disabled="! $canUpdate" />
                 @if ($isConsistentContainerNameEnabled === true)
                     <form wire:submit="saveCustomName" class="w-full">
                         <x-unsaved-bar action="saveCustomName" targets="customInternalName" />
                         <x-forms.input
-                            helper="You can add a custom name for your container.<br><br>The name is converted to slug format when saved. <span class='font-bold dark:text-warning'>You will lose the rolling update feature!</span>"
-                            id="customInternalName" label="Custom container name" canGate="update"
+                            helper="{{ __('application.adv_custom_name_helper') }}"
+                            id="customInternalName" label="{{ __('application.adv_custom_name') }}" canGate="update"
                             :canResource="$application" />
                     </form>
                 @else
                     <form wire:submit="saveCustomNamePrefix" class="w-full">
                         <x-unsaved-bar action="saveCustomNamePrefix" targets="customContainerNamePrefix" />
                         <x-forms.input
-                            helper="Optional prefix for generated container names. Containers are named <span class='font-bold'>prefix-timestamp</span>, for example <span class='font-bold'>shop-api-20260908T141530</span>, instead of starting with <span class='font-bold'>{{ $application->uuid }}</span>.<br><br>The prefix is converted to slug format when saved, can be up to {{ \App\Models\ApplicationSetting::MAX_CONTAINER_NAME_PREFIX_LENGTH }} characters and must be unique on this server. Rolling updates keep working."
-                            id="customContainerNamePrefix" label="Container name prefix" placeholder="e.g. my-api"
+                            helper="{{ __('application.adv_name_prefix_helper', ['prefix_timestamp' => 'prefix-timestamp', 'example' => 'shop-api-20260908T141530', 'uuid' => $application->uuid, 'max' => \App\Models\ApplicationSetting::MAX_CONTAINER_NAME_PREFIX_LENGTH]) }}"
+                            id="customContainerNamePrefix" label="{{ __('application.adv_name_prefix') }}" placeholder="{{ __('application.adv_name_prefix_placeholder') }}"
                             canGate="update" :canResource="$application" />
                     </form>
                 @endif
@@ -65,130 +65,130 @@
         </x-application.settings-section>
 
         @if ($application->git_based())
-            <x-application.settings-section id="advanced-deployment-section" title="Deployment"
-                helper="Automatic deployments from Git webhooks.">
+            <x-application.settings-section id="advanced-deployment-section" title="{{ __('application.adv_deployment_title') }}"
+                helper="{{ __('application.adv_deployment_helper') }}">
                 <div class="grid w-full gap-4 sm:grid-cols-2">
-                    <x-forms.listbox id="isAutoDeployEnabled" label="Auto deploy" onChange="instantSave"
-                        helper="Automatically deploy new commits based on Git webhooks."
+                    <x-forms.listbox id="isAutoDeployEnabled" label="{{ __('application.adv_auto_deploy') }}" onChange="instantSave"
+                        helper="{{ __('application.adv_auto_deploy_helper') }}"
                         :options="[
-                            ['value' => true, 'label' => 'Deploy on push (webhooks)'],
-                            ['value' => false, 'label' => 'Manual deployments only'],
+                            ['value' => true, 'label' => __('application.adv_opt_deploy_on_push')],
+                            ['value' => false, 'label' => __('application.adv_opt_manual_only')],
                         ]" :disabled="! $canUpdate" />
                 </div>
             </x-application.settings-section>
 
-            <x-application.settings-section id="advanced-git-section" title="Git"
-                helper="Options applied while cloning the repository during builds.">
+            <x-application.settings-section id="advanced-git-section" title="{{ __('application.adv_git_title') }}"
+                helper="{{ __('application.adv_git_helper') }}">
                 <div class="grid w-full gap-4 sm:grid-cols-2">
-                    <x-forms.listbox id="isGitSubmodulesEnabled" label="Submodules" onChange="instantSave"
-                        helper="Allow Git submodules during the build process."
+                    <x-forms.listbox id="isGitSubmodulesEnabled" label="{{ __('application.adv_submodules') }}" onChange="instantSave"
+                        helper="{{ __('application.adv_submodules_helper') }}"
                         :options="[
-                            ['value' => true, 'label' => 'Clone submodules'],
-                            ['value' => false, 'label' => 'Skip submodules'],
+                            ['value' => true, 'label' => __('application.adv_opt_clone_submodules')],
+                            ['value' => false, 'label' => __('application.adv_opt_skip_submodules')],
                         ]" :disabled="! $canUpdate" />
-                    <x-forms.listbox id="isGitLfsEnabled" label="Git LFS" onChange="instantSave"
-                        helper="Allow Git LFS during the build process."
+                    <x-forms.listbox id="isGitLfsEnabled" label="{{ __('application.adv_git_lfs') }}" onChange="instantSave"
+                        helper="{{ __('application.adv_git_lfs_helper') }}"
                         :options="[
-                            ['value' => true, 'label' => 'Enabled'],
-                            ['value' => false, 'label' => 'Disabled'],
+                            ['value' => true, 'label' => __('application.adv_opt_enabled')],
+                            ['value' => false, 'label' => __('application.adv_opt_disabled')],
                         ]" :disabled="! $canUpdate" />
-                    <x-forms.listbox id="isGitShallowCloneEnabled" label="Clone depth" onChange="instantSave"
-                        helper="Shallow cloning (--depth=1) speeds up deployments by only fetching the latest commit, useful for large repositories."
+                    <x-forms.listbox id="isGitShallowCloneEnabled" label="{{ __('application.adv_clone_depth') }}" onChange="instantSave"
+                        helper="{{ __('application.adv_clone_depth_helper') }}"
                         :options="[
-                            ['value' => false, 'label' => 'Full history'],
-                            ['value' => true, 'label' => 'Shallow clone (latest commit only)'],
+                            ['value' => false, 'label' => __('application.adv_opt_full_history')],
+                            ['value' => true, 'label' => __('application.adv_opt_shallow')],
                         ]" :disabled="! $canUpdate" />
                 </div>
             </x-application.settings-section>
         @endif
 
         @if ($application->build_pack === 'dockercompose')
-            <x-application.settings-section id="advanced-compose-section" title="Docker compose"
-                helper="Advanced behavior for compose-based deployments.">
+            <x-application.settings-section id="advanced-compose-section" title="{{ __('application.adv_compose_title') }}"
+                helper="{{ __('application.adv_compose_helper') }}">
                 <div class="grid w-full gap-4 sm:grid-cols-2">
-                    <x-forms.listbox id="isRawComposeDeploymentEnabled" label="Compose deployment" onChange="instantSave"
-                        helper="WARNING: Advanced use cases only. In raw mode your compose file is deployed as-is. Nothing is modified by Coolify and you need to configure the proxy parts. More info in the <a class='underline dark:text-white' href='https://coolify.io/docs/knowledge-base/docker/compose#raw-docker-compose-deployment'>documentation</a>."
+                    <x-forms.listbox id="isRawComposeDeploymentEnabled" label="{{ __('application.adv_compose_deployment') }}" onChange="instantSave"
+                        helper="{!! __('application.adv_compose_deployment_helper') !!}"
                         :options="[
-                            ['value' => false, 'label' => 'Managed by Coolify'],
-                            ['value' => true, 'label' => 'Raw (deploy file as-is)'],
+                            ['value' => false, 'label' => __('application.adv_opt_managed')],
+                            ['value' => true, 'label' => __('application.adv_opt_raw')],
                         ]" :disabled="! $canUpdate" />
-                    <x-forms.listbox id="isConnectToDockerNetworkEnabled" label="Predefined network" onChange="instantSave"
-                        helper="By default a compose resource only gets its own internal network. Connecting to a Coolify predefined network may require different internal DNS names. More info <a class='underline dark:text-white' target='_blank' href='https://coolify.io/docs/knowledge-base/docker/compose#connect-to-predefined-networks'>here</a>."
+                    <x-forms.listbox id="isConnectToDockerNetworkEnabled" label="{{ __('application.adv_predefined_network') }}" onChange="instantSave"
+                        helper="{!! __('application.adv_predefined_network_helper') !!}"
                         :options="[
-                            ['value' => false, 'label' => 'Isolated network only'],
-                            ['value' => true, 'label' => 'Connect to predefined network'],
+                            ['value' => false, 'label' => __('application.adv_opt_isolated')],
+                            ['value' => true, 'label' => __('application.adv_opt_connect_predefined')],
                         ]" :disabled="! $canUpdate" />
                 </div>
             </x-application.settings-section>
         @endif
 
-        <x-application.settings-section id="advanced-proxy-section" title="Proxy"
-            helper="How the proxy serves traffic for this application.">
+        <x-application.settings-section id="advanced-proxy-section" title="{{ __('application.adv_proxy_title') }}"
+            helper="{{ __('application.adv_proxy_helper') }}">
             @if ($labelsManagedByCoolify)
                 <div class="grid w-full gap-4 sm:grid-cols-2">
-                    <x-forms.listbox id="isGzipEnabled" label="Gzip compression" onChange="instantSave"
-                        helper="Some services compress data by default. In that case you do not need this."
+                    <x-forms.listbox id="isGzipEnabled" label="{{ __('application.adv_gzip') }}" onChange="instantSave"
+                        helper="{{ __('application.adv_gzip_helper') }}"
                         :options="[
-                            ['value' => true, 'label' => 'Enabled'],
-                            ['value' => false, 'label' => 'Disabled'],
+                            ['value' => true, 'label' => __('application.adv_opt_enabled')],
+                            ['value' => false, 'label' => __('application.adv_opt_disabled')],
                         ]" :disabled="! $canUpdate" />
-                    <x-forms.listbox id="isStripprefixEnabled" label="Path prefixes" onChange="instantSave"
-                        helper="Strip Prefix removes prefixes from paths, like /api/ to /."
+                    <x-forms.listbox id="isStripprefixEnabled" label="{{ __('application.adv_path_prefixes') }}" onChange="instantSave"
+                        helper="{{ __('application.adv_path_prefixes_helper') }}"
                         :options="[
-                            ['value' => true, 'label' => 'Strip prefixes'],
-                            ['value' => false, 'label' => 'Keep paths as-is'],
+                            ['value' => true, 'label' => __('application.adv_opt_strip')],
+                            ['value' => false, 'label' => __('application.adv_opt_keep_paths')],
                         ]" :disabled="! $canUpdate" />
                 </div>
             @else
-                <x-empty size="sm" title="Proxy behavior is managed through labels"
-                    description="Container labels are managed manually for this application. Switch label management back to Coolify to configure the proxy here."
+                <x-empty size="sm" title="{{ __('application.adv_labels_managed') }}"
+                    description="{{ __('application.adv_labels_managed_desc') }}"
                     icon-name="globe">
                     <x-slot:contents>
                         <a class="button"
                             href="{{ route('project.application.configuration', $generalRouteParameters) }}#container-labels-section"
                             {{ wireNavigate() }}>
-                            Go to Container labels
+                            {{ __('application.gen_go_labels') }}
                         </a>
                     </x-slot:contents>
                 </x-empty>
             @endif
         </x-application.settings-section>
 
-        <x-application.settings-section id="advanced-operations-section" title="Operations"
-            helper="Shutdown and restart behavior for this application's containers.">
+        <x-application.settings-section id="advanced-operations-section" title="{{ __('application.adv_operations_title') }}"
+            helper="{{ __('application.adv_operations_helper') }}">
             <div class="grid w-full gap-4 lg:grid-cols-2">
-                <x-forms.input type="number" id="stopGracePeriod" label="Stop grace period (seconds)"
+                <x-forms.input type="number" id="stopGracePeriod" label="{{ __('application.adv_stop_grace') }}"
                     placeholder="{{ DEFAULT_STOP_GRACE_PERIOD_SECONDS }}" wire:change="saveStopGracePeriod"
-                    helper="How long to wait for graceful shutdown during rolling updates, manual stops, and restarts. Applies to all containers for this application. Saved automatically. Default: {{ DEFAULT_STOP_GRACE_PERIOD_SECONDS }} seconds. Range: {{ MIN_STOP_GRACE_PERIOD_SECONDS }}-{{ MAX_STOP_GRACE_PERIOD_SECONDS }} seconds (1 hour)."
+                    helper="{{ __('application.adv_stop_grace_helper', ['default' => DEFAULT_STOP_GRACE_PERIOD_SECONDS, 'min' => MIN_STOP_GRACE_PERIOD_SECONDS, 'max' => MAX_STOP_GRACE_PERIOD_SECONDS]) }}"
                     min="{{ MIN_STOP_GRACE_PERIOD_SECONDS }}" max="{{ MAX_STOP_GRACE_PERIOD_SECONDS }}"
                     canGate="update" :canResource="$application" />
-                <x-forms.input type="number" min="0" id="maxRestartCount" label="Max restart count"
+                <x-forms.input type="number" min="0" id="maxRestartCount" label="{{ __('application.adv_max_restart') }}"
                     wire:change="saveMaxRestartCount"
-                    helper="Maximum number of restarts before Coolify automatically stops the application and sends a notification. Saved automatically. Set to 0 to disable the limit."
+                    helper="{{ __('application.adv_max_restart_helper') }}"
                     canGate="update" :canResource="$application" />
             </div>
         </x-application.settings-section>
 
-        <x-application.settings-section id="advanced-logs-section" title="Logs"
-            helper="Forward container logs to an external endpoint.">
+        <x-application.settings-section id="advanced-logs-section" title="{{ __('application.adv_logs_title') }}"
+            helper="{{ __('application.adv_logs_helper') }}">
             <div class="grid w-full gap-4 sm:grid-cols-2">
-                <x-forms.listbox id="isLogDrainEnabled" label="Log drain" onChange="instantSave"
-                    helper="Drain logs to the log drain endpoint configured in your Server settings."
+                <x-forms.listbox id="isLogDrainEnabled" label="{{ __('application.adv_log_drain') }}" onChange="instantSave"
+                    helper="{{ __('application.adv_log_drain_helper') }}"
                     :options="[
-                        ['value' => false, 'label' => 'Disabled'],
-                        ['value' => true, 'label' => 'Send logs to the log drain endpoint'],
+                        ['value' => false, 'label' => __('application.adv_opt_disabled')],
+                        ['value' => true, 'label' => __('application.adv_opt_send_logs')],
                     ]" :disabled="! $canUpdate" />
             </div>
         </x-application.settings-section>
 
         @if ($application->build_pack !== 'dockercompose')
-            <x-application.settings-section id="advanced-gpu-section" title="GPU"
-                helper="Give this application access to the host's GPUs. More info <a href='https://docs.docker.com/compose/gpu-support/' class='underline dark:text-white' target='_blank'>here</a>.">
+            <x-application.settings-section id="advanced-gpu-section" title="{{ __('application.adv_gpu_title') }}"
+                helper="{!! __('application.adv_gpu_helper') !!}">
                 <div class="grid w-full gap-4 sm:grid-cols-2">
-                    <x-forms.listbox id="isGpuEnabled" label="GPU access" onChange="instantSave"
+                    <x-forms.listbox id="isGpuEnabled" label="{{ __('application.adv_gpu_access') }}" onChange="instantSave"
                         :options="[
-                            ['value' => false, 'label' => 'Disabled'],
-                            ['value' => true, 'label' => 'Enabled'],
+                            ['value' => false, 'label' => __('application.adv_opt_disabled')],
+                            ['value' => true, 'label' => __('application.adv_opt_enabled')],
                         ]" :disabled="! $canUpdate" />
                 </div>
                 @if ($isGpuEnabled)
@@ -198,14 +198,14 @@
                         <x-unsaved-bar action="submit"
                             targets="gpuDriver,gpuCount,gpuDeviceIds,gpuOptions" />
                         <div class="grid gap-4 sm:grid-cols-2">
-                            <x-forms.input label="GPU driver" id="gpuDriver" canGate="update" :canResource="$application" />
-                            <x-forms.input label="GPU count" placeholder="Empty means use all GPUs" id="gpuCount"
+                            <x-forms.input label="{{ __('application.adv_gpu_driver') }}" id="gpuDriver" canGate="update" :canResource="$application" />
+                            <x-forms.input label="{{ __('application.adv_gpu_count') }}" placeholder="{{ __('application.adv_gpu_count_placeholder') }}" id="gpuCount"
                                 canGate="update" :canResource="$application" />
                         </div>
-                        <x-forms.input label="GPU device ids" placeholder="0,2"
-                            helper="Comma separated list of device ids. More info <a href='https://docs.docker.com/compose/gpu-support/#access-specific-devices' class='underline dark:text-white' target='_blank'>here</a>."
+                        <x-forms.input label="{{ __('application.adv_gpu_device_ids') }}" placeholder="0,2"
+                            helper="{!! __('application.adv_gpu_device_ids_helper') !!}"
                             id="gpuDeviceIds" canGate="update" :canResource="$application" />
-                        <x-forms.textarea rows="6" label="GPU options" id="gpuOptions" canGate="update"
+                        <x-forms.textarea rows="6" label="{{ __('application.adv_gpu_options') }}" id="gpuOptions" canGate="update"
                             :canResource="$application" />
                     </form>
                 @endif

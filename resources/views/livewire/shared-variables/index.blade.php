@@ -1,8 +1,7 @@
 <div>
     <x-slot:title>
-        Shared Variables | Coolify
+        {{ __('sv.title') }} | ABao
     </x-slot>
-
     <x-shared-variables.layout>
 
     <div class="w-full">
@@ -14,9 +13,9 @@
                 <x-reicon name="teams" class="size-4" />
             </div>
             <div class="mt-auto pt-5">
-                <h2 class="text-[13px]! leading-4! font-semibold! text-black dark:text-fg">Team wide</h2>
+                <h2 class="text-[13px]! leading-4! font-semibold! text-black dark:text-fg">{{ __('sv.team_wide') }}</h2>
                 <p class="mt-1 text-[11px] leading-4 text-neutral-500 dark:text-fg-faint">
-                    Available to every resource owned by this team.
+                    {{ __('sv.team_wide_helper') }}
                 </p>
             </div>
         </a>
@@ -28,9 +27,9 @@
                 <x-reicon name="projects" class="size-4" />
             </div>
             <div class="mt-auto pt-5">
-                <h2 class="text-[13px]! leading-4! font-semibold! text-black dark:text-fg">Project wide</h2>
+                <h2 class="text-[13px]! leading-4! font-semibold! text-black dark:text-fg">{{ __('sv.project_wide') }}</h2>
                 <p class="mt-1 text-[11px] leading-4 text-neutral-500 dark:text-fg-faint">
-                    Shared by every environment inside a project.
+                    {{ __('sv.project_wide_helper') }}
                 </p>
             </div>
         </a>
@@ -42,9 +41,9 @@
                 <x-reicon name="layers" class="size-4" />
             </div>
             <div class="mt-auto pt-5">
-                <h2 class="text-[13px]! leading-4! font-semibold! text-black dark:text-fg">Environment wide</h2>
+                <h2 class="text-[13px]! leading-4! font-semibold! text-black dark:text-fg">{{ __('sv.env_wide') }}</h2>
                 <p class="mt-1 text-[11px] leading-4 text-neutral-500 dark:text-fg-faint">
-                    Reused by resources in one environment.
+                    {{ __('sv.env_wide_helper') }}
                 </p>
             </div>
         </a>
@@ -56,9 +55,9 @@
                 <x-reicon name="servers" class="size-4" />
             </div>
             <div class="mt-auto pt-5">
-                <h2 class="text-[13px]! leading-4! font-semibold! text-black dark:text-fg">Server wide</h2>
+                <h2 class="text-[13px]! leading-4! font-semibold! text-black dark:text-fg">{{ __('sv.server_wide') }}</h2>
                 <p class="mt-1 text-[11px] leading-4 text-neutral-500 dark:text-fg-faint">
-                    Available to resources deployed on one server.
+                    {{ __('sv.server_wide_helper') }}
                 </p>
             </div>
         </a>

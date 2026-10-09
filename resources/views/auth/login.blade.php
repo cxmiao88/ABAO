@@ -1,5 +1,5 @@
 <x-layout-simple>
-    <x-auth.shell title="Coolify" description="Sign in to manage your applications and infrastructure.">
+    <x-auth.shell title="ABao" description="{{ __('auth2_signin_desc') }}">
         <div class="flex flex-col gap-4">
             @if (session('status'))
                 <x-auth.alert type="success">{{ session('status') }}</x-auth.alert>
@@ -79,7 +79,7 @@
             </form>
 
             @if ($enabled_oauth_providers->isNotEmpty())
-                <div class="auth-divider"><span>Or continue with</span></div>
+                <div class="auth-divider"><span>{{ __('auth2_or_continue_with') }}</span></div>
                 <div class="flex flex-col gap-2">
                     @foreach ($enabled_oauth_providers as $provider_setting)
                         <x-forms.button class="w-full justify-center" type="button"
@@ -97,7 +97,7 @@
 
         <x-slot:footer>
             @if ($is_registration_enabled)
-                <span>New to Coolify?</span>
+                <span>{{ __('auth2_new_to_coolify') }}</span>
                 <a href="/register" class="auth-text-link">{{ __('auth.register_now') }}</a>
             @elseif ($can_register_with_oauth)
                 <span>{{ __('auth.register_with_oauth') }}</span>

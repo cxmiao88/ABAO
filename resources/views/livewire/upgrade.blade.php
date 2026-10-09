@@ -1,4 +1,4 @@
-<div @if ($isUpgradeAvailable) title="New version available" @else title="No upgrade available" @endif
+<div @if ($isUpgradeAvailable) title="{{ __('application.up_new_version') }}" @else title="{{ __('application.up_no_upgrade') }}" @endif
     x-init="$wire.checkUpdate" x-data="upgradeModal({
         currentVersion: @js($currentVersion),
         latestVersion: @js($latestVersion),
@@ -8,21 +8,21 @@
         <div :class="{ 'z-40': modalOpen }" class="relative w-auto h-auto">
             @if ($fullButton)
                 <x-forms.button type="button" @click="modalOpen=true" x-show="!showProgress" x-cloak isHighlighted>
-                    Upgrade now
+                    {{ __('application.up_upgrade_now') }}
                 </x-forms.button>
                 <x-forms.button type="button" @click="modalOpen=true" x-show="showProgress" x-cloak isHighlighted>
-                    Updating…
+                    {{ __('application.up_updating_ellipsis') }}
                 </x-forms.button>
             @else
-            <button type="button" title="Upgrade in progress" aria-label="Upgrade in progress"
+            <button type="button" title="{{ __('application.up_upgrade_in_progress') }}" aria-label="{{ __('application.up_upgrade_in_progress') }}"
                 @click="modalOpen=true" x-show="showProgress" x-cloak
                 class="inline-flex h-[18px] cursor-pointer items-center rounded-full bg-coollabs/10 px-1.5 text-[9.5px] font-semibold leading-none text-coollabs ring-1 ring-inset ring-coollabs/25 transition-colors hover:bg-coollabs/15 dark:bg-warning/15 dark:text-warning dark:ring-warning/25 dark:hover:bg-warning/20">
-                Updating
+                {{ __('application.up_updating') }}
             </button>
-            <button type="button" title="Update available" aria-label="Update available"
+            <button type="button" title="{{ __('application.up_update_available') }}" aria-label="{{ __('application.up_update_available') }}"
                 @click="modalOpen=true" x-show="!showProgress" x-cloak
                 class="inline-flex h-[18px] cursor-pointer items-center rounded-full bg-coollabs/10 px-1.5 text-[9.5px] font-semibold leading-none text-coollabs ring-1 ring-inset ring-coollabs/25 transition-colors hover:bg-coollabs/15 dark:bg-warning/15 dark:text-warning dark:ring-warning/25 dark:hover:bg-warning/20">
-                Update available
+                {{ __('application.up_update_available') }}
             </button>
             @endif
             <template x-teleport="body">

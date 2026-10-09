@@ -1,6 +1,6 @@
 <div class="w-full">
     <x-slot:title>
-        {{ __('server.registries_title') }} | Coolify
+        {{ __('server.registries_title') }} | ABao
     </x-slot>
 
     <div class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">

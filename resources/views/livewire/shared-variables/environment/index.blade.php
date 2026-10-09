@@ -1,5 +1,5 @@
 <div>
-    <x-slot:title>Environment Variables | Coolify</x-slot>
+    <x-slot:title>{{ __('sv.environment_variables_title') }} | ABao</x-slot>
 
     <x-shared-variables.layout>
         <div class="w-full" x-data="{
@@ -11,9 +11,9 @@
             }
         }">
             @if ($projects->isEmpty())
-                <x-empty title="No environments yet" description="Create a project environment before adding environment-wide variables." icon-name="layers" />
+                <x-empty title="{{ __('sv.no_environments_yet') }}" description="{{ __('sv.no_environments_helper') }}" icon-name="layers" />
             @else
-                <x-shared-variables.view-controls label="environments" storage-key="shared-variables-environments-view" />
+                <x-shared-variables.view-controls label="{{ __('sv.environments') }}" storage-key="shared-variables-environments-view" />
 
                 <div x-cloak x-show="viewMode === 'grid'" class="flex flex-col gap-6">
                     @foreach ($projects as $project)
@@ -22,9 +22,9 @@
                             $project->description,
                             ...$project->environments->flatMap(fn ($environment) => [$environment->name, $environment->description])->all(),
                         ]))">
-                            <x-section-heading :title="$project->name" :subtitle="$project->description ?: 'Project environments'" />
+                            <x-section-heading :title="$project->name" :subtitle="$project->description ?: __('sv.project_environments')" />
                             @if ($project->environments->isEmpty())
-                                <x-empty title="No environments in this project." size="sm" />
+                                <x-empty title="{{ __('sv.no_environments_in_project') }}" size="sm" />
                             @else
                                 <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                                     @foreach ($project->environments as $environment)

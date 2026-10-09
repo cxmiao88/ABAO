@@ -14,7 +14,7 @@
     $hasDeviceData = array_sum(array_map('intval', $series)) > 0;
 @endphp
 @if (! $hasDeviceData)
-    <x-empty size="sm" title="No device data" description="No device data for the selected range." icon-name="network" />
+    <x-empty size="sm" title="{{ __('anl_no_device_data') }}" description="{{ __('anl_no_device_data_desc') }}" icon-name="network" />
 @else
     <div wire:ignore id="{!! $deviceChartId !!}" class="min-h-[240px] w-full"></div>
 
@@ -49,11 +49,11 @@
                         const requests = Number(series[seriesIndex] ?? 0).toLocaleString();
 
                         return `<div class="apexcharts-tooltip-custom">
-                            <div class="apexcharts-tooltip-custom-value">${label}: <span class="apexcharts-tooltip-value-bold">${requests} requests</span></div>
+                            <div class="apexcharts-tooltip-custom-value">${label}: <span class="apexcharts-tooltip-value-bold">${requests} {{ __('anl_requests_suffix') }}</span></div>
                         </div>`;
                     },
                 },
-                noData: { text: 'Loading devices…', style: { color: textColor } },
+                noData: { text: @js(__('anl_loading_devices')), style: { color: textColor } },
             });
             chart.render();
 

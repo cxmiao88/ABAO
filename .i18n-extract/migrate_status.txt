@@ -1,0 +1,30 @@
+  2026_09_16_102243_add_sentinel_waiting_since_to_servers_table ...... [3] Ran  
+  2026_09_18_111936_create_scheduled_job_states_and_deliveries_tables  [3] Ran  
+  2026_09_18_145710_create_standalone_sqlites_table .................. Pending  
+  2026_09_18_165916_add_is_build_server_fallback_enabled_to_teams_table  Pending  
+  2026_09_19_121840_add_server_role_to_server_settings_table ......... Pending  
+  2026_09_21_070754_remove_duplicate_additional_destinations ......... Pending  
+  2026_09_21_070755_add_unique_index_to_additional_destinations_table  Pending  
+  2026_09_21_100148_add_level_to_audit_events_table .................. Pending  
+  2026_09_25_154121_add_owned_to_managed_dns_records_table ........... Pending  
+  2026_09_25_154122_create_managed_dns_record_references_table ....... Pending  
+  2026_09_25_210000_remove_legacy_traefik_dashboard_labels ........... Pending  
+  2026_09_26_152908_add_standalone_sqlite_id_to_local_persistent_volumes_table  Pending  
+  2026_09_28_100000_add_github_runner_fields_to_github_apps_table .... Pending  
+  2026_09_28_100001_create_github_runner_configs_table ............... Pending  
+  2026_09_28_100002_create_github_runner_executions_table ............ Pending  
+  2026_09_28_121242_add_parent_deployment_uuid_to_application_deployment_queues_table  Pending  
+  2026_09_29_082403_add_disk_usage_notification_interval_to_server_settings_table  Pending  
+  2026_09_29_083244_create_notification_throttles_table .............. Pending  
+  2026_09_29_200325_add_created_before_oauth_identities_to_users_table  Pending  
+  2026_09_30_115702_add_ignores_compose_driver_options_to_local_persistent_volumes_table  Pending  
+  2026_09_30_120000_rekey_oauth_identity_issuers_to_provider_instance  Pending  
+  2026_10_01_051935_add_allow_pull_requests_to_github_runner_configs_table  Pending  
+  2026_10_02_055938_remove_next_run_at_from_scheduled_jobs ........... Pending  
+  2026_10_02_120000_add_legacy_password_quoting_to_keydb_and_dragonfly  Pending  
+  2026_10_03_172204_add_recovery_bounds_to_scheduled_volume_backup_executions_table  Pending  
+  2026_10_05_064824_add_is_pull_request_to_github_runner_executions_table  Pending  
+  2026_10_05_064841_close_legacy_enqueued_scheduled_job_deliveries ... Pending  
+  2026_10_05_204113_add_legacy_password_quoting_to_standalone_redis .. Pending  
+  2026_10_06_161016_add_locale_to_users_table ........................ [3] Ran  
+

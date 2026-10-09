@@ -1,5 +1,5 @@
 <x-layout-simple>
-    <x-auth.shell title="Coolify" description="Verify your identity to finish signing in.">
+    <x-auth.shell title="ABao" description="{{ __('auth2_2fa_desc') }}">
         <div class="flex flex-col gap-4" x-data="{
             showRecovery: false,
             submitting: false,
@@ -34,8 +34,8 @@
 
             <div class="auth-guidance">
                 <x-reicon name="info-circle" class="mt-0.5 size-4 shrink-0" />
-                <p x-show="!showRecovery">Enter the 6-digit code from your authenticator app.</p>
-                <p x-show="showRecovery" x-cloak>Enter one of the recovery codes you saved when setting up two-factor authentication.</p>
+                <p x-show="!showRecovery">{{ __('auth2_2fa_code') }}</p>
+                <p x-show="showRecovery" x-cloak>{{ __('auth2_2fa_recovery') }}</p>
             </div>
 
             <form x-ref="challengeForm" action="/two-factor-challenge" method="POST" class="flex flex-col gap-4"
@@ -45,12 +45,12 @@
                 <div x-show="!showRecovery" class="flex flex-col gap-3">
                     <input x-ref="authenticatorCode" type="text" name="code" inputmode="numeric"
                         pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" autofocus
-                        aria-label="Two-factor authentication code" :disabled="showRecovery"
+                        aria-label="{{ __('auth2_2fa_aria') }}" :disabled="showRecovery"
                         @input="submitAuthenticatorCode($event)"
                         class="mx-auto h-14 w-64 rounded-md border border-neutral-300 bg-white px-4 text-center text-xl font-semibold tracking-[0.5em] text-neutral-900 transition-colors focus:border-warning focus:outline-none focus:ring-1 focus:ring-warning dark:border-white/10 dark:bg-coolgray-100 dark:text-white" />
                     <button type="button" class="auth-text-link self-center"
                         x-on:click="showRecovery = true; $nextTick(() => $refs.recoveryCode.focus())">
-                        Use a recovery code
+                        {{ __('auth2_use_recovery') }}
                     </button>
                 </div>
 
@@ -59,19 +59,19 @@
                         x-bind:disabled="!showRecovery" label="{{ __('input.recovery_code') }}" />
                     <button type="button" class="auth-text-link self-center"
                         x-on:click="showRecovery = false; $nextTick(() => $refs.authenticatorCode.focus())">
-                        Use an authenticator code
+                        {{ __('auth2_use_authenticator') }}
                     </button>
                 </div>
 
                 <x-forms.button class="w-full justify-center" type="submit" x-bind:disabled="submitting" isHighlighted>
-                    Verify and continue
+                    {{ __('auth2_verify_continue') }}
                 </x-forms.button>
             </form>
         </div>
 
         <x-slot:footer>
-            <span>Not your account?</span>
-            <a href="/login" class="auth-text-link">Back to login</a>
+            <span>{{ __('auth2_not_account') }}</span>
+            <a href="/login" class="auth-text-link">{{ __('auth2_back_to_login') }}</a>
         </x-slot:footer>
     </x-auth.shell>
 </x-layout-simple>

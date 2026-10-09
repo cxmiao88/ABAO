@@ -7,12 +7,12 @@
         default => 'neutral',
     };
     $dnsLabel = match ($row['dns_status']) {
-        'ok' => 'DNS matches',
-        'failed' => 'DNS mismatch',
-        'skipped' => 'DNS skipped',
-        'checking' => 'Checking DNS...',
-        'pending' => 'Not checked',
-        default => 'DNS unknown',
+        'ok' => __('application.dns_matches'),
+        'failed' => __('application.dns_mismatch'),
+        'skipped' => __('application.dns_skipped'),
+        'checking' => __('application.dns_checking'),
+        'pending' => __('application.dns_not_checked'),
+        default => __('application.dns_unknown'),
     };
     $gridClass = 'service-domains-overview-grid';
     $publicUrl = getFqdnWithoutPort($row['url']);
@@ -43,7 +43,7 @@
                 @if ($isSuggested)
                     <span
                         class="min-w-0 text-[13px] text-black sm:truncate dark:text-white"
-                        title="{{ $row['url'] }} (not configured yet)">
+                        title="{{ $row['url'] }} ({{ __('application.dns_not_configured_yet') }})">
                         {{ $row['url'] }}
                     </span>
                 @else
@@ -77,54 +77,54 @@
             @endif
         </div>
 
-        <div class="service-domain-detail" title="Protocol redirect">
-            <span class="service-domain-detail-label">Protocol redirect</span>
-            <span>{{ str_starts_with($row['url'], 'https://') && $isForceHttpsEnabled ? 'HTTP → HTTPS' : 'Disabled' }}</span>
+        <div class="service-domain-detail" title="{{ __('application.dns_protocol_redirect') }}">
+            <span class="service-domain-detail-label">{{ __('application.dns_protocol_redirect') }}</span>
+            <span>{{ str_starts_with($row['url'], 'https://') && $isForceHttpsEnabled ? __('application.dns_http_https') : __('application.dns_disabled') }}</span>
         </div>
-        <div class="service-domain-detail" title="Domain redirect">
-            <span class="service-domain-detail-label">Domain redirect</span>
-            <span>{{ match ($rowDirection) { 'www' => 'non-www → www', 'non-www' => 'www → non-www', default => 'Disabled' } }}</span>
+        <div class="service-domain-detail" title="{{ __('application.dns_domain_redirect') }}">
+            <span class="service-domain-detail-label">{{ __('application.dns_domain_redirect') }}</span>
+            <span>{{ match ($rowDirection) { 'www' => __('application.dns_nonwww_www'), 'non-www' => __('application.dns_www_nonwww'), default => __('application.dns_disabled') } }}</span>
         </div>
         <div class="service-domain-detail"
-            title="{{ ($row['has_port_override'] ?? false) ? 'Custom internal port for this domain' : 'Inherited from the application or Compose service port' }}">
-            <span class="service-domain-detail-label">Internal port</span>
+            title="{{ ($row['has_port_override'] ?? false) ? __('application.dns_custom_port') : __('application.dns_inherited_port') }}">
+            <span class="service-domain-detail-label">{{ __('application.dns_internal_port') }}</span>
             @if (filled($row['internal_port'] ?? null))
-                <span aria-label="Internal port {{ $row['internal_port'] }}">{{ $row['internal_port'] }}</span>
+                <span aria-label="{{ __('application.dns_internal_port') }} {{ $row['internal_port'] }}">{{ $row['internal_port'] }}</span>
             @else
-                <span role="img" aria-label="No internal port" title="No internal port. Set Ports Exposes or a per-domain internal port so the proxy can route this domain." class="text-red-500 dark:text-red-400">
+                <span role="img" aria-label="{{ __('application.dns_no_port') }}" title="{{ __('application.dns_no_port_title') }}" class="text-red-500 dark:text-red-400">
                     <x-reicon name="alert-triangle" class="size-4" />
                 </span>
             @endif
         </div>
         <div class="service-domain-detail">
-            <span class="service-domain-detail-label">Search indexing</span>
-            <span role="img" aria-label="{{ $isNoindexed ? 'Search indexing blocked' : 'Search indexing allowed' }}"
-                title="{{ $isNoindexed ? 'Search indexing blocked' : 'Search indexing allowed' }}">
+            <span class="service-domain-detail-label">{{ __('application.dns_search_indexing') }}</span>
+            <span role="img" aria-label="{{ $isNoindexed ? __('application.dns_noindexed') : __('application.dns_indexed') }}"
+                title="{{ $isNoindexed ? __('application.dns_noindexed') : __('application.dns_indexed') }}">
                 <x-reicon :name="$isNoindexed ? 'x' : 'check'" class="size-4" />
             </span>
         </div>
 
-        <div class="service-domain-mobile-summary" aria-label="Domain routing summary">
+        <div class="service-domain-mobile-summary" aria-label="{{ __('application.dns_routing_summary') }}">
             @if (str_starts_with($row['url'], 'https://') && $isForceHttpsEnabled)
-                <span>HTTP → HTTPS</span>
+                <span>{{ __('application.dns_http_https') }}</span>
             @endif
             @if (in_array($rowDirection, ['www', 'non-www'], true))
-                <span>{{ $rowDirection === 'www' ? 'non-www → www' : 'www → non-www' }}</span>
+                <span>{{ $rowDirection === 'www' ? __('application.dns_nonwww_www') : __('application.dns_www_nonwww') }}</span>
             @elseif (! str_starts_with($row['url'], 'https://') || ! $isForceHttpsEnabled)
-                <span>No redirects</span>
+                <span>{{ __('application.dns_no_redirects') }}</span>
             @endif
-            <span>Port {{ $row['internal_port'] ?? 'missing' }}</span>
-            <span>{{ $isNoindexed ? 'Noindex' : 'Indexable' }}</span>
+            <span>{{ __('application.dns_port') }} {{ $row['internal_port'] ?? __('application.dns_missing') }}</span>
+            <span>{{ $isNoindexed ? __('application.dns_noindex_short') : __('application.dns_indexable') }}</span>
         </div>
 
         <div class="service-domain-dns flex min-w-0 items-center">
             @if ($row['dns_status'] === 'failed')
                 <x-status-badge as="button" @click="$dispatch('open-dns-records-modal')" :status="$dnsLabel" :type="$dnsType"
-                    title="View DNS records to fix" class="cursor-pointer hover:bg-neutral-200 dark:hover:bg-white/[0.1]" />
+                    title="{{ __('application.dns_view_records') }}" class="cursor-pointer hover:bg-neutral-200 dark:hover:bg-white/[0.1]" />
             @elseif ($row['dns_status'] === 'checking')
                 <x-status-badge dynamic :title="$row['dns_message']">
-                    <x-loading compact aria-label="Checking DNS" />
-                    <span class="truncate">Checking DNS...</span>
+                    <x-loading compact aria-label="{{ __('application.dns_checking') }}" />
+                    <span class="truncate">{{ __('application.dns_checking') }}</span>
                 </x-status-badge>
             @else
                 <x-status-badge :status="$dnsLabel" :type="$dnsType"
@@ -137,37 +137,37 @@
                 <button type="button" wire:click="checkDomainDns({{ $index }})"
                     wire:loading.attr="disabled"
                     wire:target="checkDomainDns({{ $index }}),checkAllDns"
-                    class="icon-button shrink-0" title="Check DNS" aria-label="Check DNS">
+                    class="icon-button shrink-0" title="{{ __('application.dns_check') }}" aria-label="{{ __('application.dns_check') }}">
                     <x-reicon name="refresh" class="size-3.5" />
                 </button>
                 @unless ($labelsAreWritable)
                     @if ($isSuggested)
                         @if ($row['needs_force_add'] ?? false)
                             <x-forms.button wire:click="addSuggestedDomain({{ $index }})" isError class="h-7! px-2! text-[12px]!">
-                                Continue
+                                {{ __('application.dns_continue') }}
                             </x-forms.button>
                         @else
                             <x-forms.button wire:click="addSuggestedDomain({{ $index }})" isHighlighted class="h-7! shrink-0 px-2.5! text-[12px]!">
-                                Add domain
+                                {{ __('application.dns_add_domain') }}
                             </x-forms.button>
                         @endif
                     @else
                         <button type="button"
                             @click="openEditDomain(@js($index), @js($row['url']), @js($editingParts), @js($row['service']), @js($isNoindexed ? 'noindex' : 'index'), @js($rowDirection))"
                             class="icon-button shrink-0"
-                            title="Domain settings" aria-label="Settings for {{ $publicUrl }}">
+                            title="{{ __('application.dns_settings') }}" aria-label="{{ __('application.dns_settings_for', ['url' => $publicUrl]) }}">
                             <x-reicon name="settings" class="size-3.5" />
                         </button>
-                        <x-modal-confirmation class="!w-auto shrink-0" title="Remove domain?" buttonTitle="Remove"
+                        <x-modal-confirmation class="!w-auto shrink-0" title="{{ __('application.dns_remove_title') }}" buttonTitle="{{ __('application.dns_remove') }}"
                             isErrorButton canGate="update" :canResource="$application"
                             submitAction="removeDomainByKey({{ $domainKey }})" :actions="[
-                                'This domain will be removed from the application.',
-                                'Redeploy or restart may be required for proxy changes.',
-                            ]" :checkboxes="[['id' => 'deleteManagedDns', 'label' => 'Also delete the DNS record created by Coolify, if present.']]"
-                            :confirmWithPassword="false" :confirmWithText="false" step2ButtonText="Remove domain">
+                                __('application.dns_remove_action1'),
+                                __('application.dns_remove_action2'),
+                            ]" :checkboxes="[['id' => 'deleteManagedDns', 'label' => __('application.dns_delete_managed')]]"
+                            :confirmWithPassword="false" :confirmWithText="false" step2ButtonText="{{ __('application.dns_remove') }}">
                             <x-slot:trigger>
                                 <button type="button" class="icon-button shrink-0 text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300"
-                                    title="Remove domain" aria-label="Remove domain">
+                                    title="{{ __('application.dns_remove') }}" aria-label="{{ __('application.dns_remove') }}">
                                     <x-reicon name="trash" class="size-3.5" />
                                 </button>
                             </x-slot:trigger>

@@ -1,0 +1,20 @@
+﻿wsl : + mkdir -p /www/server
+所在位置 行:1 字符: 1
++ wsl -d Ubuntu -- bash "/mnt/g/xianmu/juqing/baoUIIT/.i18n-extract/ins ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (+ mkdir -p /www/server:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
++ '[' '!' -d /www/server/mdserver-web ']'
++ cp -r /mnt/g/xianmu/juqing/mdserver-web /www/server/mdserver-web
++ rm -rf /www/server/mdserver-web/.git
++ cd /www/server/mdserver-web
++ bash scripts/install/ubuntu.sh
+scripts/install/ubuntu.sh: line 3: export: `PATH
+': not a valid identifier
+scripts/install/ubuntu.sh: line 6: $'\r': command not found
+scripts/install/ubuntu.sh: line 205: syntax error near unexpected token `fi'
+scripts/install/ubuntu.sh: line 205: `	fi 
+'
++ echo INSTALL_DONE
+INSTALL_DONE

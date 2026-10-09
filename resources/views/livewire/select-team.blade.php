@@ -1,5 +1,5 @@
-<x-auth.shell title="Select a team"
-    description="Choose the team you want to work in. Your choice is remembered for next time.">
+<x-auth.shell title="{{ __('auth2_select_team_title') }}"
+    description="{{ __('auth2_select_team_desc') }}">
     <div class="flex flex-col gap-2">
         @foreach ($teams as $team)
             <button type="button" wire:click="selectTeam({{ $team->id }})"

@@ -5,21 +5,21 @@
         </p>
 
         <div class="grid gap-4 sm:grid-cols-2">
-            <x-forms.input id="name" label="Name" required />
-            <x-forms.input id="group_name" label="Group name"
-                helper="Optional. Comma-separated group names to filter repositories (e.g. myorg,myteam)."
-                placeholder="All accessible repositories when empty" />
+            <x-forms.input id="name" label="{{ __('src.name') }}" required />
+            <x-forms.input id="group_name" label="{{ __('src.group_name') }}"
+                helper="{{ __('src.group_name_helper') }}"
+                placeholder="{{ __('src.all_repos_placeholder') }}" />
         </div>
 
         @if (! isCloud())
             <div x-data="{ showWarning: @entangle('is_system_wide') }">
                 <div class="max-w-xs">
-                    <x-forms.checkbox id="is_system_wide" label="System wide"
-                        helper="If checked, this GitLab App will be available for everyone in this Coolify instance." />
+                    <x-forms.checkbox id="is_system_wide" label="{{ __('src.system_wide') }}"
+                        helper="{{ __('src.system_wide_gitlab_helper') }}" />
                 </div>
                 <div x-cloak x-show="showWarning" x-transition class="mt-3">
-                    <x-callout type="warning" title="Shared with every team">
-                        System-wide GitLab Apps are available to every team on this instance. Prefer team-specific apps when you need repository isolation.
+                    <x-callout type="warning" title="{{ __('src.shared_every_team') }}">
+                        {{ __('src.system_wide_gitlab_warning') }}
                     </x-callout>
                 </div>
             </div>
@@ -30,7 +30,7 @@
         }" class="rounded-lg border border-neutral-200 dark:border-white/[0.08]">
             <button type="button" @click="open = !open"
                 class="flex w-full items-center justify-between px-3 py-2.5 text-left text-[12px] font-medium text-neutral-700 transition-colors hover:bg-neutral-50 dark:text-fg-dim dark:hover:bg-white/[0.03]">
-                Self-hosted GitLab
+                {{ __('src.self_hosted_gitlab') }}
                 <svg class="size-3.5 transition-transform" :class="{ 'rotate-180': open }" viewBox="0 0 24 24"
                     fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="6 9 12 15 18 9"></polyline>
@@ -38,22 +38,22 @@
             </button>
             <div x-cloak x-show="open" x-collapse.duration.200ms class="border-t border-neutral-200 px-3 py-3 dark:border-white/[0.08]">
                 <div class="grid gap-4 sm:grid-cols-2">
-                    <x-forms.input id="html_url" label="GitLab URL" required
-                        helper="For self-hosted GitLab, enter your instance URL (e.g. https://gitlab.example.com)." />
-                    <x-forms.input id="api_url" label="API URL" required
-                        helper="Usually your GitLab URL with /api/v4 appended." />
-                    <x-forms.input id="custom_user" label="Custom Git user" required />
-                    <x-forms.input id="custom_port" type="number" label="Custom Git port" required />
+                    <x-forms.input id="html_url" label="{{ __('src.gitlab_url') }}" required
+                        helper="{{ __('src.gitlab_url_helper') }}" />
+                    <x-forms.input id="api_url" label="{{ __('src.api_url') }}" required
+                        helper="{{ __('src.api_url_v4_helper') }}" />
+                    <x-forms.input id="custom_user" label="{{ __('src.custom_user') }}" required />
+                    <x-forms.input id="custom_port" type="number" label="{{ __('src.custom_port') }}" required />
                 </div>
             </div>
         </div>
 
         <x-forms.button class="mt-1 w-full justify-center" type="submit">
-            Continue
+            {{ __('src.continue') }}
         </x-forms.button>
     </form>
 @else
-    <x-callout type="danger" title="Insufficient permissions">
-        You don't have permission to create new GitLab Apps. Contact your team administrator.
+    <x-callout type="danger" title="{{ __('src.insufficient_permissions') }}">
+        {{ __('src.gitlab_no_perm') }}
     </x-callout>
 @endcan

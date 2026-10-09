@@ -1,6 +1,6 @@
 <div class="application-settings-form w-full">
     <x-slot:title>
-        {{ __('nav.projects') }} | Coolify
+        {{ __('nav.projects') }} | ABao
     </x-slot>
 
     <div x-data="projectsIndex()" class="w-full">

@@ -6,38 +6,38 @@
 
 @php
     $eventGroups = [
-        'Deployments' => [
-            ['key' => 'deploymentSuccess', 'label' => 'Deployment success'],
-            ['key' => 'deploymentFailure', 'label' => 'Deployment failure'],
+        __('not_deployments') => [
+            ['key' => 'deploymentSuccess', 'label' => __('not_deployment_success')],
+            ['key' => 'deploymentFailure', 'label' => __('not_deployment_failure')],
         ],
-        'Resources' => [
+        __('not_resources') => [
             [
                 'key' => 'statusChange',
-                'label' => 'Resource status changes',
-                'helper' => 'Notify when a resource stops or Coolify automatically restarts it.',
+                'label' => __('not_resource_status_changes'),
+                'helper' => __('not_resource_status_changes_helper'),
             ],
             [
                 'key' => 'restartLimitReached',
-                'label' => 'Restart limit reached',
-                'helper' => 'Notify when a resource is stopped after reaching its restart limit.',
+                'label' => __('not_restart_limit_reached'),
+                'helper' => __('not_restart_limit_reached_helper'),
             ],
         ],
-        'Backups' => [
-            ['key' => 'backupSuccess', 'label' => 'Backup success'],
-            ['key' => 'backupFailure', 'label' => 'Backup failure'],
+        __('not_backups') => [
+            ['key' => 'backupSuccess', 'label' => __('not_backup_success')],
+            ['key' => 'backupFailure', 'label' => __('not_backup_failure')],
         ],
-        'Scheduled tasks' => [
-            ['key' => 'scheduledTaskSuccess', 'label' => 'Scheduled task success'],
-            ['key' => 'scheduledTaskFailure', 'label' => 'Scheduled task failure'],
+        __('not_scheduled_tasks') => [
+            ['key' => 'scheduledTaskSuccess', 'label' => __('not_scheduled_task_success')],
+            ['key' => 'scheduledTaskFailure', 'label' => __('not_scheduled_task_failure')],
         ],
-        'Servers' => [
-            ['key' => 'dockerCleanupSuccess', 'label' => 'Docker cleanup success'],
-            ['key' => 'dockerCleanupFailure', 'label' => 'Docker cleanup failure'],
-            ['key' => 'serverDiskUsage', 'label' => 'Disk usage warning'],
-            ['key' => 'serverReachable', 'label' => 'Server reachable'],
-            ['key' => 'serverUnreachable', 'label' => 'Server unreachable'],
-            ['key' => 'serverPatch', 'label' => 'Server patching'],
-            ['key' => 'traefikOutdated', 'label' => 'Traefik proxy outdated'],
+        __('not_servers') => [
+            ['key' => 'dockerCleanupSuccess', 'label' => __('not_docker_cleanup_success')],
+            ['key' => 'dockerCleanupFailure', 'label' => __('not_docker_cleanup_failure')],
+            ['key' => 'serverDiskUsage', 'label' => __('not_disk_usage_warning')],
+            ['key' => 'serverReachable', 'label' => __('not_server_reachable')],
+            ['key' => 'serverUnreachable', 'label' => __('not_server_unreachable')],
+            ['key' => 'serverPatch', 'label' => __('not_server_patching')],
+            ['key' => 'traefikOutdated', 'label' => __('not_traefik_outdated')],
         ],
     ];
 
@@ -70,8 +70,8 @@
 @endphp
 
 <div class="flex flex-col gap-6">
-    <x-application.settings-section title="Notification events"
-        description="Choose which events send a notification on this channel.">
+    <x-application.settings-section :title="__('not_notification_events')"
+        description="{{ __('not_events_desc') }}">
         <div class="grid gap-4 lg:grid-cols-2">
             @foreach ($eventGroups as $group => $events)
                 @php
@@ -96,11 +96,11 @@
     </x-application.settings-section>
 
     @if ($threaded)
-        <x-application.settings-section title="Forum topics"
-            description="Optional. Route enabled events to a Telegram forum topic using its message thread ID. Leave blank to post in the main chat.">
+        <x-application.settings-section :title="__('not_forum_topics')"
+            description="{{ __('not_forum_topics_desc') }}">
             @if ($enabledThreadEvents === [])
                 <p class="text-[13px] leading-relaxed text-neutral-500 dark:text-fg-dim">
-                    Enable one or more events above to assign forum topic IDs.
+                    {{ __('not_enable_events_hint') }}
                 </p>
             @else
                 <div class="flex flex-col gap-5">
@@ -122,14 +122,14 @@
                                                 {{ $event['label'] }}
                                             </div>
                                             <div class="text-[11px] text-neutral-500 dark:text-fg-dim">
-                                                Topic ID
+                                                {{ __('not_topic_id') }}
                                             </div>
                                         </div>
                                         <x-forms.input wire:key="{{ $channel }}-thread-{{ $event['key'] }}"
                                             canGate="update" :canResource="$settings" type="password"
                                             :id="$event['threadModel']" :label="null"
-                                            :placeholder="'Optional'"
-                                            :aria-label="$event['label'] . ' topic ID'" />
+                                            :placeholder="__('not_optional')"
+                                            :aria-label="__('not_topic_id_aria', ['label' => $event['label']])" />
                                     </div>
                                 @endforeach
                             </div>

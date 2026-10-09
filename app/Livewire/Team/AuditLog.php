@@ -55,7 +55,7 @@ class AuditLog extends Component
         $canViewInstanceEvents = $teamId === 0 && isInstanceAdmin();
         $visibleEvents = AuditEvent::query()->visibleToTeam($teamId, $canViewInstanceEvents);
         $actionOptions = [
-            ['value' => 'all', 'label' => 'All actions'],
+            ['value' => 'all', 'label' => __('team_all_actions')],
             ...$visibleEvents->clone()
                 ->select('action')
                 ->distinct()

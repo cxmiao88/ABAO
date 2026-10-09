@@ -11,13 +11,13 @@ $email = getOldOrLocal('email', 'test3@example.com');
 ?>
 
 <x-layout-simple>
-    <x-auth.shell title="Coolify"
-        :description="$isFirstUser ? 'Create the root account for this instance.' : 'Create your account to get started.'">
+    <x-auth.shell title="ABao"
+        :description="$isFirstUser ? __('auth2_root_desc') : __('auth2_create_desc')">
         <div class="flex flex-col gap-4">
             @if ($isFirstUser)
                 <x-auth.alert type="warning">
-                    <p class="font-medium">Full instance access</p>
-                    <p class="mt-0.5 text-black/70 dark:text-white/70">This first account becomes the root user.</p>
+                    <p class="font-medium">{{ __('auth2_full_access') }}</p>
+                    <p class="mt-0.5 text-black/70 dark:text-white/70">{{ __('auth2_root_user') }}</p>
                 </x-auth.alert>
             @endif
 
@@ -44,18 +44,18 @@ $email = getOldOrLocal('email', 'test3@example.com');
 
                 <div class="auth-guidance">
                     <x-reicon name="info-circle" class="mt-0.5 size-4 shrink-0" />
-                    <p>Use at least 8 characters with uppercase, lowercase, number, and symbol.</p>
+                    <p>{{ __('auth2_password_guidance') }}</p>
                 </div>
 
                 <x-forms.button class="w-full justify-center" type="submit" isHighlighted>
-                    Create account
+                    {{ __('auth2_create_account') }}
                 </x-forms.button>
             </form>
         </div>
 
         @if (! $isFirstUser)
             <x-slot:footer>
-                <span>Already have an account?</span>
+                <span>{{ __('auth2_already_account') }}</span>
                 <a href="{{ route('login') }}"
                     class="auth-text-link underline">{{ __('auth.already_registered') }}</a>
             </x-slot:footer>

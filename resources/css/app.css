@@ -5112,3 +5112,7 @@ a.command-palette-item:focus-visible {
         height: 2.5rem;
     }
 }
+
+/* i18n-dark-patch: keep light cards gray in dark mode (synced to container build CSS) */
+:where(.dark, .dark *) .bg-red-50 { background-color: color-mix(in oklab, var(--color-red-500) 8%, var(--color-raised, #171717)) !important; }
+:where(.dark, .dark *) .bg-red-100 { background-color: color-mix(in oklab, var(--color-red-500) 12%, var(--color-raised, #171717)) !important; }

@@ -25,7 +25,7 @@
     };
 
     [$summaryLabel, $summaryType] = match (true) {
-        ! $serverReady => ['Unavailable', 'error'],
+        ! $serverReady => [__('server.status_unavailable'), 'error'],
         $proxyNeedsAttention || $sentinelNeedsAttention => ['Attention required', 'warning'],
         default => ['Ready', 'success'],
     };
@@ -66,7 +66,7 @@
                 'bg-error' => ! $serverReady,
             ])></span>
             <span class="flex-1">Server</span>
-            <span>{{ $serverReady ? 'Ready' : 'Unavailable' }}</span>
+            <span>{{ $serverReady ? __('server.status_ready') : __('server.status_unavailable') }}</span>
         </div>
         @if ($server->proxySet())
             <a href="{{ route('server.proxy', ['server_uuid' => $server->uuid]) }}" {{ wireNavigate() }}

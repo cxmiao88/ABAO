@@ -358,7 +358,7 @@
                         </svg>
                     </span>
                     <input type="text" x-model="searchQuery"
-                        placeholder="Search resources, paths, everything (type new for create)..." x-ref="searchInput"
+                        placeholder="{{ __('gs_placeholder') }}" x-ref="searchInput"
                         x-init="$watch('modalOpen', value => { if (value) setTimeout(() => $refs.searchInput.focus(), 100) })"
                         class="command-palette-input" autocomplete="off" spellcheck="false" />
                     <div class="command-palette-shortcuts">
@@ -796,7 +796,7 @@
                         class="{{ $createModalShell }}"
                         style="box-shadow: 0 0 0 1px var(--coollabs-hairline), var(--shadow-dropdown)">
                         <header class="flex-nowrap!">
-                            <h3 class="min-w-0 flex-1 truncate">New team</h3>
+                            <h3 class="min-w-0 flex-1 truncate">{{ __('team_new_team') }}</h3>
                             <button type="button" @click="modalOpen=false" class="{{ $createModalClose }}">
                                 <x-reicon name="x" class="size-4" />
                             </button>

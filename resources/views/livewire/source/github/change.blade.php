@@ -1,6 +1,6 @@
 <div>
     <x-slot:title>
-        {{ $github_app->name ?: 'GitHub App' }} | Sources | Coolify
+        {{ $github_app->name ?: __('src.github_app') }} | {{ __('src.resources') }} | ABao
     </x-slot>
 
     @if (data_get($github_app, 'app_id'))
@@ -9,25 +9,25 @@
             $showSettingsSidebar = in_array($activeTab, ['general', 'permissions', 'resources', 'danger'], true);
             $settingsMenuItems = [
                 [
-                    'label' => 'General',
+                    'label' => __('src.general'),
                     'route' => 'source.github.show',
                     'active' => $activeTab === 'general',
                     'icon' => 'settings',
                 ],
                 [
-                    'label' => 'Permissions',
+                    'label' => __('src.permissions'),
                     'route' => 'source.github.permissions',
                     'active' => $activeTab === 'permissions',
                     'icon' => 'keys',
                 ],
                 [
-                    'label' => 'Resources',
+                    'label' => __('src.resources'),
                     'route' => 'source.github.resources',
                     'active' => $activeTab === 'resources',
                     'icon' => 'grid',
                 ],
                 [
-                    'label' => 'Danger Zone',
+                    'label' => __('src.danger_zone'),
                     'route' => 'source.github.danger',
                     'active' => $activeTab === 'danger',
                     'icon' => 'shield-alert',
@@ -36,17 +36,17 @@
         @endphp
 
         <x-dashboard.navbar section="source" :parameters="$githubAppRouteParameters"
-            :title="$name ?: 'GitHub App'"
-            :subtitle="filled($organization) ? 'GitHub App for '.$organization : 'Private GitHub source'"
+            :title="$name ?: __('src.github_app')"
+            :subtitle="filled($organization) ? __('src.github_for_org', ['org' => $organization]) : __('src.private_github_source')"
             :mobileTitleOnly="true" />
 
         @if ($showSettingsSidebar)
             <section class="application-settings-workspace mt-4 w-full max-w-none lg:mt-0">
                 <div class="grid min-w-0 gap-8 xl:grid-cols-[210px_minmax(0,1fr)] xl:gap-8">
                     <aside class="application-settings-navigation min-w-0 xl:self-start">
-                        <nav aria-label="GitHub App settings"
+                        <nav aria-label="{{ __('src.github_app_settings') }}"
                             class="grid grid-cols-2 gap-0.5 border-y border-neutral-200 py-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-1 xl:border-y-0 xl:py-0 dark:border-white/[0.06]">
-                            <div class="nav-section hidden xl:block">Settings</div>
+                            <div class="nav-section hidden xl:block">{{ __('src.settings') }}</div>
                             @foreach ($settingsMenuItems as $menuItem)
                                 <a wire:key="github-app-settings-{{ str($menuItem['label'])->slug() }}"
                                     @class([
@@ -65,8 +65,8 @@
                     <div class="min-w-0">
                         @if (!data_get($github_app, 'installation_id') && $activeTab === 'general')
                             <div class="application-settings-form">
-                                <x-application.settings-section title="Complete GitHub installation"
-                                    description="Choose which repositories this GitHub App can access before using it as a source.">
+                                <x-application.settings-section title="{{ __('src.complete_installation') }}"
+                                    description="{{ __('src.complete_installation_helper') }}">
                                     <div class="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
                                         <div class="flex items-start gap-3">
                                             <div
@@ -74,13 +74,12 @@
                                                 <x-reicon name="alert-triangle" class="size-4" />
                                             </div>
                                             <p class="max-w-xl text-[12px] leading-5 text-neutral-500 dark:text-fg-dim">
-                                                Repository access has not been installed yet. Complete this step before attaching the
-                                                source to an application.
+                                                {{ __('src.repo_access_not_installed') }}
                                             </p>
                                         </div>
                                         <a class="button shrink-0 button-highlighted"
                                             href="{{ getInstallationPath($github_app) }}">
-                                            Install repositories
+                                            {{ __('src.install_repos') }}
                                             <x-external-link />
                                         </a>
                                     </div>
@@ -90,7 +89,7 @@
                             @php
                                 $privateKeyOptions = collect([
                                     blank($github_app->private_key_id)
-                                        ? ['value' => 0, 'label' => 'Select a private key']
+                                        ? ['value' => 0, 'label' => __('src.select_private_key')]
                                         : null,
                                     ...$privateKeys->map(fn ($privateKey) => [
                                         'value' => $privateKey->id,
@@ -101,106 +100,104 @@
 
                             <form wire:submit="submit" class="application-settings-form">
                                 <x-unsaved-bar action="submit" />
-                                <x-application.settings-section title="General"
-                                    description="Connection and authentication settings for this private GitHub source.">
+                                <x-application.settings-section title="{{ __('src.general') }}"
+                                    description="{{ __('src.general_gh_helper') }}">
                                     <x-slot:actions>
                                         @if ($isConnected)
                                             <x-forms.button type="button" canGate="view" :canResource="$github_app"
                                                 wire:click.prevent="testConnection">
-                                                Test connection
+                                                {{ __('src.test_connection') }}
                                             </x-forms.button>
                                         @endif
                                         <x-forms.button type="button" canGate="update" :canResource="$github_app"
                                             wire:click.prevent="updateGithubAppName">
                                             <x-reicon name="refresh" class="size-3.5" />
-                                            Sync name
+                                            {{ __('src.sync_name') }}
                                         </x-forms.button>
                                         @can('update', $github_app)
                                             <a href="{{ $this->getGithubAppNameUpdatePath() }}" class="button">
-                                                Rename
+                                                {{ __('src.rename') }}
                                                 <x-external-link />
                                             </a>
                                             <a href="{{ getInstallationPath($github_app) }}" class="button">
-                                                Repositories
+                                                {{ __('src.repositories') }}
                                                 <x-external-link />
                                             </a>
                                         @endcan
                                     </x-slot:actions>
 
                                     <div class="grid gap-4 lg:grid-cols-2">
-                                        <x-forms.input canGate="update" :canResource="$github_app" id="name" label="App name" />
+                                        <x-forms.input canGate="update" :canResource="$github_app" id="name" label="{{ __('src.app_name') }}" />
                                         <x-forms.input canGate="update" :canResource="$github_app" id="organization"
-                                            label="Organization" placeholder="Personal account when empty" />
+                                            label="{{ __('src.organization') }}" placeholder="{{ __('src.personal_placeholder') }}" />
 
                                         @if (!isCloud())
                                             <div class="lg:col-span-2">
-                                                <x-forms.listbox canGate="update" :canResource="$github_app" id="isSystemWide" label="Availability" :options="[
-                                                    ['value' => false, 'label' => 'Only this team'],
-                                                    ['value' => true, 'label' => 'Every team on this instance'],
+                                                <x-forms.listbox canGate="update" :canResource="$github_app" id="isSystemWide" label="{{ __('src.availability') }}" :options="[
+                                                    ['value' => false, 'label' => __('src.only_this_team')],
+                                                    ['value' => true, 'label' => __('src.every_team')],
                                                 ]"
-                                                    helper="System-wide GitHub Apps can be used by every team on this Coolify instance."
+                                                    helper="{{ __('src.system_wide_helper') }}"
                                                     :disabled="!auth()->user()->can('update', $github_app)" />
                                             </div>
                                             @if ($isSystemWide)
                                                 <div class="lg:col-span-2">
-                                                    <x-callout type="warning" title="Shared with every team">
-                                                        Use team-specific GitHub Apps when you need repository isolation between teams.
+                                                    <x-callout type="warning" title="{{ __('src.shared_every_team') }}">
+                                                        {{ __('src.team_specific_advice') }}
                                                     </x-callout>
                                                 </div>
                                             @endif
                                         @endif
 
                                         <x-forms.input canGate="update" :canResource="$github_app" id="htmlUrl"
-                                            label="HTML URL" />
+                                            label="{{ __('src.html_url') }}" />
                                         <x-forms.input canGate="update" :canResource="$github_app" id="apiUrl"
-                                            label="API URL" />
+                                            label="{{ __('src.api_url') }}" />
                                         <x-forms.input canGate="update" :canResource="$github_app" id="customUser"
-                                            label="User" required />
+                                            label="{{ __('src.user') }}" required />
                                         <x-forms.input canGate="update" :canResource="$github_app" type="number"
-                                            id="customPort" label="Port" required />
+                                            id="customPort" label="{{ __('src.port') }}" required />
                                         <x-forms.input canGate="update" :canResource="$github_app" type="number" id="appId"
-                                            label="App ID" required />
+                                            label="{{ __('src.app_id') }}" required />
                                         <x-forms.input canGate="update" :canResource="$github_app" type="number"
-                                            id="installationId" label="Installation ID" required />
+                                            id="installationId" label="{{ __('src.installation_id') }}" required />
                                         <x-forms.input canGate="update" :canResource="$github_app" id="clientId"
-                                            label="Client ID" type="password" required />
+                                            label="{{ __('src.client_id') }}" type="password" required />
                                         <x-forms.input canGate="update" :canResource="$github_app" id="clientSecret"
-                                            label="Client secret" type="password" required />
+                                            label="{{ __('src.client_secret') }}" type="password" required />
                                         <x-forms.input canGate="update" :canResource="$github_app" id="webhookSecret"
-                                            label="Webhook secret" type="password" required />
-                                        <x-forms.listbox canGate="update" :canResource="$github_app" id="privateKeyId" label="Private key" required
+                                            label="{{ __('src.webhook_secret') }}" type="password" required />
+                                        <x-forms.listbox canGate="update" :canResource="$github_app" id="privateKeyId" label="{{ __('src.private_key') }}" required
                                             :options="$privateKeyOptions" :disabled="!auth()->user()->can('update', $github_app)" />
                                     </div>
                                 </x-application.settings-section>
                             </form>
                         @elseif ($activeTab === 'danger')
                             <div class="application-settings-form">
-                                <x-application.settings-section id="github-app-danger-section" title="Danger zone"
-                                    helper="Destructive actions for this GitHub App source cannot be undone.">
-                                    <x-danger-zone title="Delete GitHub App">
+                                <x-application.settings-section id="github-app-danger-section" title="{{ __('src.danger_zone') }}"
+                                    helper="{{ __('src.danger_helper') }}">
+                                    <x-danger-zone title="{{ __('src.delete_github_app') }}">
                                                 <p>
-                                                    Permanently delete
-                                                    <strong class="font-semibold text-black dark:text-fg">{{ $name ?: 'this GitHub App' }}</strong>
-                                                    from Coolify. Applications using this source will need another Git provider configured.
+                                                    {{ __('src.delete_github_app_body', ['name' => $name ?: __('src.this_github_app')]) }}
                                                 </p>
                                                 <ul class="space-y-1 text-xs">
-                                                    <li>• The App registration on GitHub is not removed automatically.</li>
-                                                    <li>• Linked applications keep their Git settings until you change them.</li>
-                                                    <li>• This source cannot be restored from Coolify after deletion.</li>
+                                                    <li>• {{ __('src.delete_note1') }}</li>
+                                                    <li>• {{ __('src.delete_note2') }}</li>
+                                                    <li>• {{ __('src.delete_note3') }}</li>
                                                 </ul>
                                             <x-slot:action>
                                                 @can('delete', $github_app)
-                                                    <x-modal-confirmation title="Confirm GitHub App Deletion?" isErrorButton
-                                                        buttonTitle="Delete" submitAction="delete"
-                                                        :actions="['The selected GitHub App will be permanently deleted.']"
+                                                    <x-modal-confirmation title="{{ __('src.confirm_delete_q') }}" isErrorButton
+                                                        buttonTitle="{{ __('src.delete') }}" submitAction="delete"
+                                                        :actions="[__('src.confirm_delete_action')]"
                                                         confirmationText="{{ data_get($github_app, 'name') }}"
-                                                        confirmationLabel="Please confirm the execution of the actions by entering the GitHub App Name below"
-                                                        shortConfirmationLabel="GitHub App Name" :confirmWithPassword="false"
-                                                        step2ButtonText="Permanently Delete" />
+                                                        confirmationLabel="{{ __('src.confirm_label') }}"
+                                                        shortConfirmationLabel="{{ __('src.github_app_name') }}" :confirmWithPassword="false"
+                                                        step2ButtonText="{{ __('src.permanently_delete') }}" />
                                                 @else
                                                     <x-forms.button isError disabled canGate="delete" :canResource="$github_app"
-                                                        tooltip="You do not have permission to delete this GitHub App.">
-                                                        Delete
+                                                        tooltip="{{ __('src.no_delete_perm') }}">
+                                                        {{ __('src.delete') }}
                                                     </x-forms.button>
                                                 @endcan
                                             </x-slot:action>
@@ -208,8 +205,8 @@
 
                                     @cannot('delete', $github_app)
                                         <div class="mt-4">
-                                            <x-callout type="danger" title="Insufficient permissions">
-                                                Contact a team administrator if this GitHub App must be deleted.
+                                            <x-callout type="danger" title="{{ __('src.insufficient_permissions') }}">
+                                                {{ __('src.no_delete_perm_helper') }}
                                             </x-callout>
                                         </div>
                                     @endcannot
@@ -228,21 +225,21 @@
         <header class="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div class="min-w-0">
                 <h1 class="truncate text-[24px]! leading-7! font-semibold! tracking-tight!">
-                    {{ $name ?: 'GitHub App' }}
+                    {{ $name ?: __('src.github_app') }}
                 </h1>
                 <p class="mt-1 text-[13px] text-neutral-500 dark:text-fg-dim">
-                    Finish registering this GitHub App before using it as a source
+                    {{ __('src.finish_register') }}
                 </p>
             </div>
             @can('delete', $github_app)
                 <div class="shrink-0">
-                    <x-modal-confirmation title="Confirm GitHub App Deletion?" isErrorButton
-                        buttonTitle="Delete" submitAction="delete"
-                        :actions="['The selected GitHub App will be permanently deleted.']"
+                    <x-modal-confirmation title="{{ __('src.confirm_delete_q') }}" isErrorButton
+                        buttonTitle="{{ __('src.delete') }}" submitAction="delete"
+                        :actions="[__('src.confirm_delete_action')]"
                         confirmationText="{{ data_get($github_app, 'name') }}"
-                        confirmationLabel="Please confirm the execution of the actions by entering the GitHub App Name below"
-                        shortConfirmationLabel="GitHub App Name" :confirmWithPassword="false"
-                        step2ButtonText="Permanently Delete" />
+                        confirmationLabel="{{ __('src.confirm_label') }}"
+                        shortConfirmationLabel="{{ __('src.github_app_name') }}" :confirmWithPassword="false"
+                        step2ButtonText="{{ __('src.permanently_delete') }}" />
                 </div>
             @endcan
         </header>
@@ -250,11 +247,11 @@
         @can('create', $github_app)
             @php
                 $endpointOptions = collect([
-                    $fqdn ? ['value' => $fqdn, 'label' => 'Use '.$fqdn] : null,
-                    $ipv4 ? ['value' => $ipv4, 'label' => 'Use '.$ipv4] : null,
-                    $ipv6 ? ['value' => $ipv6, 'label' => 'Use '.$ipv6] : null,
+                    $fqdn ? ['value' => $fqdn, 'label' => __('src.use_endpoint', ['endpoint' => $fqdn])] : null,
+                    $ipv4 ? ['value' => $ipv4, 'label' => __('src.use_endpoint', ['endpoint' => $ipv4])] : null,
+                    $ipv6 ? ['value' => $ipv6, 'label' => __('src.use_endpoint', ['endpoint' => $ipv6])] : null,
                     config('app.url')
-                        ? ['value' => config('app.url'), 'label' => 'Use '.config('app.url')]
+                        ? ['value' => config('app.url'), 'label' => __('src.use_endpoint', ['endpoint' => config('app.url')])]
                         : null,
                 ])->filter()->values()->all();
             @endphp
@@ -266,74 +263,74 @@
                         useCustomWebhookEndpoint: $wire.entangle('use_custom_webhook_endpoint').live,
                         customWebhookEndpoint: $wire.entangle('custom_webhook_endpoint').live,
                     }">
-                    <x-application.settings-section title="Automated installation" class="[&>.application-settings-section-body]:flex [&>.application-settings-section-body]:flex-1 [&>.application-settings-section-body]:flex-col"
-                        description="Register through GitHub's manifest flow with permissions and webhooks preconfigured.">
+                    <x-application.settings-section title="{{ __('src.automated_installation') }}" class="[&>.application-settings-section-body]:flex [&>.application-settings-section-body]:flex-1 [&>.application-settings-section-body]:flex-col"
+                        description="{{ __('src.automated_helper') }}">
                         <x-slot:actions>
-                            <x-status-badge label="Recommended" type="success" />
+                            <x-status-badge :label="__('src.recommended')" type="success" />
                         </x-slot:actions>
 
                         <div class="flex min-h-[24rem] flex-1 flex-col gap-4">
                             @if (!isCloud() || isDev())
-                                <x-forms.listbox id="use_custom_webhook_endpoint" label="Webhook endpoint"
+                                <x-forms.listbox id="use_custom_webhook_endpoint" label="{{ __('src.webhook_endpoint') }}"
                                     :live="true" :options="[
-                                        ['value' => false, 'label' => 'Use an instance endpoint'],
-                                        ['value' => true, 'label' => 'Use a custom endpoint'],
+                                        ['value' => false, 'label' => __('src.use_instance_endpoint')],
+                                        ['value' => true, 'label' => __('src.use_custom_endpoint')],
                                     ]"
                                     x-model="useCustomWebhookEndpoint"
-                                    helper="Use a custom public URL when Coolify is behind a tunnel or reverse proxy." />
+                                    helper="{{ __('src.custom_endpoint_helper') }}" />
                                 <div x-show="!useCustomWebhookEndpoint">
-                                    <x-forms.listbox id="webhook_endpoint" label="Instance endpoint"
+                                    <x-forms.listbox id="webhook_endpoint" label="{{ __('src.instance_endpoint') }}"
                                         :options="$endpointOptions" x-model="webhookEndpoint" />
                                 </div>
                                 <div x-cloak x-show="useCustomWebhookEndpoint">
                                     <x-forms.input canGate="create" :canResource="$github_app"
                                         x-model="customWebhookEndpoint" id="custom_webhook_endpoint" type="url"
-                                        label="Custom endpoint" placeholder="https://coolify.example.com"
-                                        helper="Do not include /webhooks." />
+                                        label="{{ __('src.custom_endpoint') }}" placeholder="{{ __('src.custom_endpoint_placeholder') }}"
+                                        helper="{{ __('src.no_webhooks_suffix') }}" />
                                 </div>
                             @else
                                 <p class="text-[12px] leading-5 text-neutral-500 dark:text-fg-dim">
-                                    Register the GitHub App before using this source.
+                                    {{ __('src.register_before_use') }}
                                 </p>
                             @endif
 
                             <div
                                 class="rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-[12px] leading-5 text-neutral-600 dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-fg-dim">
-                                <p class="font-medium text-black dark:text-fg">Mandatory permissions</p>
-                                <p class="mt-1">Contents: read · Metadata: read · Email: read</p>
+                                <p class="font-medium text-black dark:text-fg">{{ __('src.mandatory_permissions') }}</p>
+                                <p class="mt-1">{{ __('src.mandatory_perm_detail') }}</p>
                             </div>
 
                             <x-forms.listbox id="preview_deployment_permissions"
-                                label="Preview deployment access" :options="[
-                                    ['value' => false, 'label' => 'Do not update pull requests'],
-                                    ['value' => true, 'label' => 'Read and update pull requests'],
+                                label="{{ __('src.preview_deployment_access') }}" :options="[
+                                    ['value' => false, 'label' => __('src.do_not_update_pr')],
+                                    ['value' => true, 'label' => __('src.read_update_pr')],
                                 ]"
-                                helper="Write access lets Coolify post deployment status and links on pull requests." />
+                                helper="{{ __('src.preview_access_helper') }}" />
 
-                            <x-forms.listbox id="github_runners" label="GitHub Actions runners"
+                            <x-forms.listbox id="github_runners" label="{{ __('src.gh_actions_runners') }}"
                                 :disabled="blank($github_app->organization)"
                                 :options="[
-                                    ['value' => false, 'label' => 'Do not run workflow jobs'],
-                                    ['value' => true, 'label' => 'Run workflow jobs on build servers'],
+                                    ['value' => false, 'label' => __('src.do_not_run_jobs')],
+                                    ['value' => true, 'label' => __('src.run_jobs_on_build')],
                                 ]"
                                 :helper="filled($github_app->organization)
-                                    ? 'Adds the organization Self-hosted runners (write) and Actions (read) permissions and the Workflow job webhook event.'
-                                    : 'Only GitHub Apps that belong to an organization can run workflow jobs. Delete this source and create a new one with an organization.'" />
+                                    ? __('src.runners_org_only_helper')
+                                    : __('src.runners_org_needed')" />
 
                             <button type="button"
                                 class="button mt-auto w-full justify-center button-highlighted"
                                 x-on:click.prevent="createGithubApp(webhookEndpoint, useCustomWebhookEndpoint, customWebhookEndpoint, $wire.preview_deployment_permissions, {{ Illuminate\Support\Js::from($administration) }}, $wire.github_runners)">
-                                Register with GitHub
+                                {{ __('src.register_with_github') }}
                             </button>
                         </div>
                     </x-application.settings-section>
                 </div>
 
                 <div class="application-settings-form flex">
-                    <x-application.settings-section title="Manual installation" class="[&>.application-settings-section-body]:flex [&>.application-settings-section-body]:flex-1 [&>.application-settings-section-body]:flex-col"
-                        description="Enter GitHub App credentials manually for GitHub Enterprise or custom permission sets.">
+                    <x-application.settings-section title="{{ __('src.manual_installation') }}" class="[&>.application-settings-section-body]:flex [&>.application-settings-section-body]:flex-1 [&>.application-settings-section-body]:flex-col"
+                        description="{{ __('src.manual_helper') }}">
                         <x-slot:actions>
-                            <x-status-badge label="Advanced" type="neutral" />
+                            <x-status-badge :label="__('src.advanced')" type="neutral" />
                         </x-slot:actions>
 
                         <div class="flex min-h-[24rem] flex-1 flex-col">
@@ -342,12 +339,11 @@
                                 <x-reicon name="settings" class="size-5" />
                             </div>
                             <p class="mt-4 max-w-md text-[12px] leading-5 text-neutral-500 dark:text-fg-dim">
-                                Use this path when the automated GitHub manifest flow is unavailable or you need
-                                complete control over the App configuration.
+                                {{ __('src.manual_body') }}
                             </p>
                             <button type="button" class="button mt-auto w-fit"
                                 wire:click.prevent="createGithubAppManually">
-                                Continue manually
+                                {{ __('src.continue_manually') }}
                                 <x-reicon name="arrow-right" class="size-3.5" />
                             </button>
                         </div>
@@ -355,8 +351,8 @@
                 </div>
             </div>
         @else
-            <x-callout type="danger" title="Insufficient permissions">
-                You do not have permission to create GitHub Apps. Contact your team administrator.
+            <x-callout type="danger" title="{{ __('src.insufficient_permissions') }}">
+                {{ __('src.github_no_perm_create') }}
             </x-callout>
         @endcan
 
@@ -370,11 +366,11 @@
                 const selectedEndpoint = webhook_endpoint ? webhook_endpoint.trim() : '';
                 const customEndpoint = custom_webhook_endpoint ? custom_webhook_endpoint.trim() : '';
                 if (use_custom_webhook_endpoint && !customEndpoint) {
-                    window.toast('Error', { type: 'danger', description: 'Please enter a custom webhook endpoint.' });
+                    window.toast('Error', { type: 'danger', description: '{{ __("src.toast_webhook_endpoint") }}' });
                     return;
                 }
                 if (!use_custom_webhook_endpoint && !selectedEndpoint) {
-                    window.toast('Error', { type: 'danger', description: 'Please enter a webhook endpoint.' });
+                    window.toast('Error', { type: 'danger', description: '{{ __("src.toast_endpoint") }}' });
                     return;
                 }
                 let baseUrl = (use_custom_webhook_endpoint ? customEndpoint : selectedEndpoint).replace(/\/+$/, '');

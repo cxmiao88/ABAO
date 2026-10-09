@@ -1,0 +1,39 @@
+services:
+  halo:
+    image: registry.fit2cloud.com/halo/halo:2.18
+    restart: on-failure:3
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    volumes:
+      - halo-data:/root/.halo2
+    environment:
+      - SERVICE_FQDN_HALO_8090
+      - 'HALO_EXTERNAL_URL=${SERVICE_FQDN_HALO}'
+      - 'SPRING_DATASOURCE_URL=jdbc:postgresql://postgresql:5432/halo'
+      - SPRING_DATASOURCE_USERNAME=$SERVICE_USER_POSTGRES
+      - SPRING_DATASOURCE_PASSWORD=$SERVICE_PASSWORD_POSTGRES
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8090/actuator/health/readiness"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+  postgresql:
+    image: postgres:16-alpine
+    volumes:
+      - postgresql-data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=$SERVICE_USER_POSTGRES
+      - POSTGRES_PASSWORD=$SERVICE_PASSWORD_POSTGRES
+      - POSTGRES_DB=halo
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}'
+      interval: 5s
+      timeout: 20s
+      retries: 10
+volumes:
+  halo-data:
+  postgresql-data:

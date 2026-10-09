@@ -1,6 +1,6 @@
 <x-layout-simple>
-    <x-auth.shell title="Coolify"
-        description="Enter your account email and we’ll send you a secure reset link.">
+    <x-auth.shell title="ABao"
+        description="{{ __('auth2_forgot_desc') }}">
         <div class="flex flex-col gap-4">
             @if (session('status'))
                 <x-auth.alert type="success">{{ session('status') }}</x-auth.alert>
@@ -27,19 +27,19 @@
                 </form>
             @else
                 <x-auth.alert type="warning">
-                    <p class="font-medium">Transactional email is not configured</p>
+                    <p class="font-medium">{{ __('auth2_txn_not_configured') }}</p>
                     <p class="mt-0.5 text-black/70 dark:text-white/70">
-                        Configure email delivery or follow the
+                        {{ __('auth2_txn_guide_pre') }}
                         <a class="font-medium underline underline-offset-2" target="_blank" rel="noopener noreferrer"
-                            href="{{ config('constants.urls.docs') }}">manual reset guide</a>.
+                            href="{{ config('constants.urls.docs') }}">{{ __('auth2_txn_guide_link') }}</a>{{ __('auth2_txn_guide_post') }}
                     </p>
                 </x-auth.alert>
             @endif
         </div>
 
         <x-slot:footer>
-            <span>Remember your password?</span>
-            <a href="/login" class="auth-text-link">Back to login</a>
+            <span>{{ __('auth2_remember_password') }}</span>
+            <a href="/login" class="auth-text-link">{{ __('auth2_back_to_login') }}</a>
         </x-slot:footer>
     </x-auth.shell>
 </x-layout-simple>

@@ -1,8 +1,8 @@
 <div>
     <x-slot:title>
-        Project Variables | Coolify
+        {{ __('sv.project_variables_title') }} | ABao
     </x-slot>
 
     <x-shared-variables.editor :resource="$project" :variables="$project->environment_variables"
-        type="project" title="{{ $project->name }}" :view="$view" variablesLabel="Project shared variables" />
+        type="project" title="{{ $project->name }}" :view="$view" variablesLabel="{{ __('sv.project_shared_variables') }}" />
 </div>

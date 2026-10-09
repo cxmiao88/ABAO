@@ -2,7 +2,7 @@
     'title',
     'subtitle' => null,
     'href' => null,
-    'actionLabel' => 'View all',
+    'actionLabel' => __('dash_view_all'),
     'icon' => 'arrow-right',
 ])
 

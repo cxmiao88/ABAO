@@ -1,5 +1,5 @@
 <x-layout-simple>
-    <x-auth.shell title="Coolify" description="Confirm your password to continue to this secure area.">
+    <x-auth.shell title="ABao" description="{{ __('auth2_confirm_desc') }}">
         <div class="flex flex-col gap-4">
             @if (session('status'))
                 <x-auth.alert type="success">{{ session('status') }}</x-auth.alert>
@@ -17,7 +17,7 @@
 
             <div class="auth-guidance">
                 <x-reicon name="info-circle" class="mt-0.5 size-4 shrink-0" />
-                <p>This is a secure area. Please confirm your password before continuing.</p>
+                <p>{{ __('auth2_confirm_guidance') }}</p>
             </div>
 
             <form action="/user/confirm-password" method="POST" class="flex flex-col gap-4">

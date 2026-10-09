@@ -1,5 +1,5 @@
 <div>
-    <x-slot:title>Project Variables | Coolify</x-slot>
+    <x-slot:title>{{ __('sv.project_variables_title') }} | ABao</x-slot>
 
     <x-shared-variables.layout>
         <div class="w-full" x-data="{
@@ -11,10 +11,10 @@
             }
         }">
             @if ($projects->isEmpty())
-                <x-empty title="No projects yet" description="Create a project before adding project-wide variables."
+                <x-empty title="{{ __('sv.no_projects_yet') }}" description="{{ __('sv.no_projects_helper') }}"
                     icon-name="projects" />
             @else
-                <x-shared-variables.view-controls label="projects" storage-key="shared-variables-projects-view" />
+                <x-shared-variables.view-controls label="{{ __('sv.projects') }}" storage-key="shared-variables-projects-view" />
 
                 <div x-cloak x-show="viewMode === 'grid'" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     @foreach ($projects as $project)
@@ -37,7 +37,7 @@
                                 </div>
                             </div>
                             <div class="mt-auto pt-4 text-[11px] text-neutral-500 dark:text-fg-dim">
-                                {{ $project->environment_variables()->count() }} {{ Str::plural('variable', $project->environment_variables()->count()) }}
+                                {{ $project->environment_variables()->count() }} {{ __('sv.variables_count') }}
                             </div>
                         </a>
                     @endforeach
@@ -55,7 +55,7 @@
                                 <x-reicon name="projects" class="size-4 shrink-0 text-neutral-500 dark:text-fg-dim" />
                             @endif
                             <div class="min-w-0 flex-1"><div class="truncate text-[13px] font-medium">{{ $project->name }}</div><div class="truncate text-[11px] text-neutral-500 dark:text-fg-faint">{{ $project->description }}</div></div>
-                            <span class="shrink-0 text-[11px] text-neutral-500 dark:text-fg-dim">{{ $project->environment_variables()->count() }} {{ Str::plural('variable', $project->environment_variables()->count()) }}</span>
+                            <span class="shrink-0 text-[11px] text-neutral-500 dark:text-fg-dim">{{ $project->environment_variables()->count() }} {{ __('sv.variables_count') }}</span>
                         </a>
                     @endforeach
                 </div>

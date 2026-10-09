@@ -1,0 +1,7 @@
+66:                    <x-application.settings-section id="server-connection-section" :title="__('server.connection_title')"
+246:                    </x-application.settings-section>
+249:                    <x-application.settings-section id="server-overview-section" :title="__('server.overview_title')"
+293:                            @include('livewire.server.system-overview-partial', ['stats' => $serverStats])
+336:                    </x-application.settings-section>
+339:                        <x-application.settings-section :title="__('server.previous_validation_title')"
+345:                        </x-application.settings-section>

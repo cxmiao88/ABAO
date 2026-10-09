@@ -51,8 +51,8 @@
         <div class="hidden" wire:poll.2000ms="pollDnsChecks" aria-hidden="true"></div>
     @endif
     @if ($labelsAreWritable)
-        <x-callout type="warning" title="Domains managed via labels" class="mb-4">
-            Container label readonly mode is disabled. Domains must be set in the Labels section on the General page.
+        <x-callout type="warning" title="{{ __('application.dom_labels_managed') }}" class="mb-4">
+            {{ __('application.dom_labels_managed_desc') }}
             @unless ($isCompose)
                 <a class="mt-2 block font-medium underline"
                     href="{{ route('project.application.configuration', [
@@ -61,33 +61,32 @@
                         'application_uuid' => $application->uuid,
                     ]) }}#container-labels-section"
                     {{ wireNavigate() }}>
-                    Go to Container labels
+                    {{ __('application.gen_go_labels') }}
                 </a>
             @endunless
         </x-callout>
     @endif
 
     @if ($isCompose && count($composeServices) === 0)
-        <x-callout type="info" title="No services">
-            No non-database services found in the Docker Compose file. Domains can only be assigned to application
-            services.
+        <x-callout type="info" title="{{ __('application.dom_no_services') }}">
+            {{ __('application.dom_no_services_desc') }}
         </x-callout>
     @endif
 
     @cannot('update', $application)
-        <x-callout type="danger" title="Insufficient permissions">
-            You don't have permission to manage domains. Contact your team administrator for access.
+        <x-callout type="danger" title="{{ __('application.dom_no_permission') }}">
+            {{ __('application.dom_no_permission_desc') }}
         </x-callout>
     @endcannot
 
     {{-- Toolbar --}}
     <div class="flex flex-wrap items-center gap-2">
         <div class="min-w-0 flex-1">
-            <h2 id="domains-section">Domains</h2>
+            <h2 id="domains-section">{{ __('application.dom_title') }}</h2>
             <p class="text-[13px] text-neutral-500 dark:text-fg-dim">
-                {{ $configuredCount }} domain{{ $configuredCount === 1 ? '' : 's' }}
+                {{ __('application.dom_domain_count', ['count' => $configuredCount]) }}
                 @if ($suggestedCount > 0)
-                    · {{ $suggestedCount }} not added
+                    · {{ __('application.dom_not_added', ['count' => $suggestedCount]) }}
                 @endif
             </p>
         </div>
@@ -96,32 +95,32 @@
                 <div class="relative w-full sm:w-64">
                     <x-reicon name="search"
                         class="pointer-events-none absolute top-1/2 left-2.5 z-10 size-3.5 -translate-y-1/2 text-neutral-400 dark:text-fg-faint" />
-                    <input type="search" x-model="domainSearch" aria-label="Search services or domains"
-                        class="input h-8! w-full pl-8! text-[13px]!" placeholder="Search services or domains" />
+                    <input type="search" x-model="domainSearch" aria-label="{{ __('application.dom_search_placeholder') }}"
+                        class="input h-8! w-full pl-8! text-[13px]!" placeholder="{{ __('application.dom_search_placeholder') }}" />
                 </div>
             @endif
             @can('update', $application)
                 <x-forms.button wire:click="checkAllDns" :showLoadingIndicator="false" wire:loading.attr="disabled" wire:target="checkAllDns,checkDomainDns">
                     <x-reicon name="refresh" class="size-3.5" />
-                    Check all DNS
+                    {{ __('application.pvd_check_all_dns') }}
                 </x-forms.button>
                 <div class="relative shrink-0">
                     @include('livewire.project.shared.cloudflare-autoconfigure')
                 </div>
                 @unless ($labelsAreWritable)
                     @if (! $isCompose || count($composeServices) > 0)
-                        <x-modal-input title="Add domain" :closeOutside="false" :wireIgnore="false"
+                        <x-modal-input title="{{ __('application.pvd_add_domain') }}" :closeOutside="false" :wireIgnore="false"
                             canGate="update" :canResource="$application">
                             <x-slot:content>
                                 <button type="button"
                                     class="button button-highlighted">
                                     <x-reicon name="plus" class="size-3.5" />
-                                    Add domain
+                                    {{ __('application.pvd_add_domain') }}
                                 </button>
                             </x-slot:content>
                             <form wire:submit="addDomain" class="application-settings-form flex flex-col gap-4">
                                 @if ($isCompose && count($composeServices) > 0)
-                                    <x-forms.listbox canGate="update" :canResource="$application" label="Service" id="newDomainService" required
+                                    <x-forms.listbox canGate="update" :canResource="$application" label="{{ __('application.pvd_service') }}" id="newDomainService" required
                                         :options="collect($composeServices)->map(fn ($serviceName) => [
                                             'value' => $serviceName,
                                             'label' => $serviceName,
@@ -132,10 +131,8 @@
                                 <x-forms.domain-input id="newDomainParts" errorId="newDomain" />
 
                                 @if ($addDomainDnsFailed)
-                                    <x-callout type="danger" title="DNS is not pointing to the right IP">
-                                        This domain does not currently resolve to this server.
-                                        Traffic may not reach Coolify until you update DNS.
-                                        Are you sure you want to add it anyway?
+                                    <x-callout type="danger" title="{{ __('application.dom_dns_wrong_ip') }}">
+                                        {{ __('application.dom_dns_wrong_ip_desc') }}
                                         @if (filled($addDomainDnsMessage))
                                             <div class="pt-2">{{ $addDomainDnsMessage }}</div>
                                         @endif
@@ -144,16 +141,16 @@
 
                                 <div class="flex flex-wrap items-center justify-between gap-2 pt-2">
                                     <x-forms.button type="button" wire:click="generateDomain">
-                                        Generate domain
+                                        {{ __('application.pvd_generate_domain') }}
                                     </x-forms.button>
                                     <div class="flex flex-wrap gap-2">
                                         @if ($addDomainDnsFailed)
                                             <x-forms.button type="button" wire:click="confirmAddDomainDespiteDns" isError>
-                                                Continue
+                                                {{ __('application.dns_continue') }}
                                             </x-forms.button>
                                         @else
                                             <x-forms.button type="submit" isHighlighted>
-                                                Save
+                                                {{ __('application.pvd_save') }}
                                             </x-forms.button>
                                         @endif
                                     </div>
@@ -168,14 +165,14 @@
 
     @if ($hasHttpsDomains && ! $labelsAreWritable)
         <div class="flex flex-wrap items-center justify-end gap-2 service-domains-https">
-            <label for="isForceHttpsEnabled-trigger" class="mb-0! text-[12px]!">Redirect HTTP to HTTPS</label>
-            <x-helper helper="Disable only when Cloudflare Tunnel or another proxy connects to Coolify over HTTP. Keep enabled when Cloudflare uses Full or Full (Strict) SSL." />
+            <label for="isForceHttpsEnabled-trigger" class="mb-0! text-[12px]!">{{ __('application.dom_redirect_https') }}</label>
+            <x-helper helper="{{ __('application.dom_redirect_https_helper') }}" />
             <div class="w-28 shrink-0">
                 <x-forms.listbox canGate="update" :canResource="$application" id="isForceHttpsEnabled"
                     onChange="updateForceHttps" portal
                     :options="[
-                        ['value' => true, 'label' => 'Enabled'],
-                        ['value' => false, 'label' => 'Disabled'],
+                        ['value' => true, 'label' => __('application.adv_opt_enabled')],
+                        ['value' => false, 'label' => __('application.adv_opt_disabled')],
                     ]" :disabled="! auth()->user()->can('update', $application)" />
             </div>
         </div>
@@ -186,26 +183,26 @@
         class="application-settings-section-body mt-1 scroll-mt-28 {{ $hasRows ? 'is-flush' : '' }} w-full">
         @if ($hasRows)
             <div class="data-table-header service-domains-overview-grid">
-                <span>Domain</span>
-                <span>Protocol redirect</span>
-                <span>Domain redirect</span>
-                <span>Internal port</span>
-                <span>Search indexing</span>
-                <span>DNS status</span>
-                <span class="text-right">Actions</span>
+                <span>{{ __('application.dns_col_domain') }}</span>
+                <span>{{ __('application.dns_protocol_redirect') }}</span>
+                <span>{{ __('application.dns_domain_redirect') }}</span>
+                <span>{{ __('application.dns_internal_port') }}</span>
+                <span>{{ __('application.dns_search_indexing') }}</span>
+                <span>{{ __('application.dns_status_col') }}</span>
+                <span class="text-right">{{ __('application.dns_actions') }}</span>
             </div>
         @endif
         @if ($isCompose && count($composeServices) === 0 && ! $hasRows)
-            <x-empty size="sm" title="No services available"
-                description="No non-database services found in the Docker Compose file."
+            <x-empty size="sm" title="{{ __('application.dom_no_services_available') }}"
+                description="{{ __('application.dom_no_services_desc') }}"
                 icon-name="globe" />
         @elseif ($isCompose && $composeDomainGroups->isEmpty())
-            <x-empty size="sm" title="No domains configured"
-                description="Add your first domain with the Add domain button above. Choose which service receives it."
+            <x-empty size="sm" title="{{ __('application.dom_no_domains') }}"
+                description="{{ __('application.dom_no_domains_compose_desc') }}"
                 icon-name="globe" />
         @elseif (! $hasRows)
-            <x-empty size="sm" title="No domains configured"
-                description="Add your first domain with the Add domain button above, or generate one with the server wildcard domain."
+            <x-empty size="sm" title="{{ __('application.dom_no_domains') }}"
+                description="{{ __('application.dom_no_domains_desc') }}"
                 icon-name="globe" />
         @elseif ($isCompose)
             @php
@@ -263,8 +260,8 @@
                 <div x-cloak
                     x-show="domainSearch.trim() && !hasDomainSearchResults(@js($domainSearchValues))"
                     class="px-4 py-8">
-                    <x-empty size="sm" title="No domains found"
-                        description="No service or domain matches your search." icon-name="search" />
+                    <x-empty size="sm" title="{{ __('application.dom_no_domains_found') }}"
+                        description="{{ __('application.dom_no_domains_found_desc') }}" icon-name="search" />
                 </div>
             </div>
         @else
@@ -281,8 +278,8 @@
             </div>
             <div x-cloak x-show="domainSearch.trim() && !hasDomainSearchResults(@js(collect($domainRows)->pluck('url')->values()))"
                 class="px-4 py-8">
-                <x-empty size="sm" title="No domains found"
-                    description="No domain matches your search." icon-name="search" />
+                <x-empty size="sm" title="{{ __('application.dom_no_domains_found') }}"
+                    description="{{ __('application.dom_no_domains_found_app_desc') }}" icon-name="search" />
             </div>
         @endif
     </div>
@@ -309,9 +306,9 @@
                         class="application-settings-form application-settings-section relative flex max-h-[calc(100dvh-2rem)] w-full flex-col overflow-hidden lg:w-auto lg:min-w-2xl lg:max-w-4xl"
                         style="box-shadow: 0 0 0 1px var(--coollabs-hairline), var(--shadow-modal)">
                         <header class="flex-nowrap!">
-                            <h3 class="min-w-0 flex-1 truncate">Domain settings</h3>
+                            <h3 class="min-w-0 flex-1 truncate">{{ __('application.dns_settings') }}</h3>
                             <button type="button" @click="closeEditDomain()"
-                                class="icon-button shrink-0" aria-label="Close">
+                                class="icon-button shrink-0" aria-label="{{ __('application.pvd_close') }}">
                                 <x-reicon name="x" class="size-4" />
                             </button>
                         </header>
@@ -322,7 +319,7 @@
                                     style="-webkit-overflow-scrolling: touch;">
                                 <div x-show="editingServiceLabel" x-cloak class="w-full">
                                     <div class="mb-1.5 flex h-4 w-full items-center gap-1.5">
-                                        <label class="mb-0! flex items-center gap-1 text-sm font-medium leading-4">Service</label>
+                                        <label class="mb-0! flex items-center gap-1 text-sm font-medium leading-4">{{ __('application.pvd_service') }}</label>
                                     </div>
                                     <input type="text" class="input" readonly x-bind:value="editingServiceLabel" />
                                 </div>
@@ -330,10 +327,8 @@
                                 <x-forms.domain-input id="editingDomainParts" errorId="editingDomain" />
 
                                 @if ($editDomainDnsFailed)
-                                    <x-callout type="danger" title="DNS is not pointing to the right IP">
-                                        This domain does not currently resolve to this server.
-                                        Traffic may not reach Coolify until you update DNS.
-                                        Are you sure you want to save it anyway?
+                                    <x-callout type="danger" title="{{ __('application.dom_dns_wrong_ip') }}">
+                                        {{ __('application.dom_dns_wrong_ip_save_desc') }}
                                         @if (filled($editDomainDnsMessage))
                                             <div class="pt-2">{{ $editDomainDnsMessage }}</div>
                                         @endif
@@ -345,19 +340,19 @@
                                         <div
                                             class="grid grid-cols-1 gap-4 border-t border-neutral-200 pt-4 sm:grid-cols-2 dark:border-white/10">
                                         <x-forms.listbox id="editingIndexing"
-                                            htmlId="application-domain-indexing" label="Search engine indexing" portal
+                                            htmlId="application-domain-indexing" label="{{ __('application.pvd_search_indexing_label') }}" portal
                                             :options="[
-                                                ['value' => 'index', 'label' => 'Indexable'],
-                                                ['value' => 'noindex', 'label' => 'Noindex'],
+                                                ['value' => 'index', 'label' => __('application.dns_indexable')],
+                                                ['value' => 'noindex', 'label' => __('application.dns_noindex_short')],
                                             ]" />
                                         <x-forms.listbox id="editingRedirect"
-                                            htmlId="application-domain-direction" label="www redirect"
-                                            :helper="$isCompose ? 'Applies to all domains for this Compose service.' : 'Applies to all domains for this application.'"
+                                            htmlId="application-domain-direction" label="{{ __('application.pvd_www_redirect') }}"
+                                            :helper="$isCompose ? __('application.dom_redirect_helper_compose') : __('application.dom_redirect_helper_app')"
                                             portal
                                             :options="[
-                                                ['value' => 'both', 'label' => 'No redirect'],
-                                                ['value' => 'www', 'label' => 'Redirect to www'],
-                                                ['value' => 'non-www', 'label' => 'Redirect to non-www'],
+                                                ['value' => 'both', 'label' => __('application.pvd_no_redirect')],
+                                                ['value' => 'www', 'label' => __('application.pvd_redirect_www')],
+                                                ['value' => 'non-www', 'label' => __('application.pvd_redirect_nonwww')],
                                             ]" />
                                         </div>
                                     @endcan
@@ -369,15 +364,15 @@
                                     <div class="flex flex-wrap items-center justify-between gap-2">
                                     <x-forms.button type="button" wire:click="regenerateEditingDomain"
                                         wire:target="regenerateEditingDomain">
-                                        Regenerate hostname
+                                        {{ __('application.pvd_regenerate_hostname') }}
                                     </x-forms.button>
                                     @if ($editDomainDnsFailed)
                                         <x-forms.button type="button" isError wire:click="confirmUpdateDomainDespiteDns">
-                                            Continue
+                                            {{ __('application.dns_continue') }}
                                         </x-forms.button>
                                     @else
                                         <x-forms.button type="submit" wire:target="updateDomain" isHighlighted>
-                                            Save
+                                            {{ __('application.pvd_save') }}
                                         </x-forms.button>
                                     @endif
                                     </div>
@@ -405,29 +400,27 @@
                         class="application-settings-form application-settings-section relative w-full lg:min-w-[36rem] lg:max-w-2xl"
                         style="box-shadow: 0 0 0 1px var(--coollabs-hairline), var(--shadow-modal)">
                         <header>
-                            <h3>Use a different port?</h3>
+                            <h3>{{ __('application.pvd_port_modal_title') }}</h3>
                             <button type="button"
                                 @click="modalOpen = false; $wire.call('cancelUseUnknownPort')"
-                                class="icon-button" aria-label="Close">
+                                class="icon-button" aria-label="{{ __('application.pvd_close') }}">
                                 <x-reicon name="x" class="size-4" />
                             </button>
                         </header>
                         <div class="application-settings-section-body">
-                            <x-callout type="warning" title="Unrecognized internal port" class="mb-4">
-                                Port <strong>{{ $unrecognizedPort }}</strong> is not listed in Ports Exposes
-                                and is not used by any application domain. The proxy will still route to it,
-                                but the container may not be listening there.
+                            <x-callout type="warning" title="{{ __('application.pvd_unrecognized_port') }}" class="mb-4">
+                                {!! __('application.pvd_unrecognized_port_body', ['port' => $unrecognizedPort]) !!}
                             </x-callout>
 
                             <div class="mt-4 flex flex-wrap justify-end gap-2 border-t border-neutral-200 pt-4 dark:border-white/[0.08]">
                                 <x-forms.button type="button" canGate="update" :canResource="$application"
                                     @click="modalOpen = false; $wire.call('cancelUseUnknownPort')">
-                                    Cancel
+                                    {{ __('application.pvd_cancel') }}
                                 </x-forms.button>
                                 <x-forms.button type="button" wire:click="confirmUseUnknownPort" canGate="update"
                                     :canResource="$application"
                                     @click="modalOpen = false" isError>
-                                    Use this port anyway
+                                    {{ __('application.pvd_use_port_anyway') }}
                                 </x-forms.button>
                             </div>
                         </div>

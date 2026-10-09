@@ -13,7 +13,7 @@
             }
         }">
         @if (!$provider_locked)
-            <x-forms.listbox required id="provider" label="Provider" :wire="false" :value="$provider"
+            <x-forms.listbox required id="provider" :label="__('sec_provider')" :wire="false" :value="$provider"
                 x-model="selectedProvider" :options="[
                 ['value' => 'hetzner', 'label' => 'Hetzner'],
                 ['value' => 'digitalocean', 'label' => 'DigitalOcean'],
@@ -25,21 +25,17 @@
 
         <div
             class="rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-[11px] leading-5 text-neutral-500 dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-fg-dim">
-            Create the token in the
-            <a :href="providerConsoleUrl"
-                target="_blank" class="font-medium text-coollabs hover:underline dark:text-warning">
-                <span x-text="providerName + ' console'"></span>
-            </a>.
+            {!! __('sec_create_in_console', ['link' => '<a :href="providerConsoleUrl" target="_blank" class="font-medium text-coollabs hover:underline dark:text-warning"><span x-text="providerName + \' \' + \''.__('sec_console').'\'"></span></a>']) !!}
         </div>
 
         <div class="grid gap-4 lg:grid-cols-2">
-            <x-forms.input required id="name" label="Token name"
-                x-bind:placeholder="`Production ${providerName} token`" />
-            <x-forms.input required type="password" id="token" label="API token"
-                placeholder="Paste the provider token" />
+            <x-forms.input required id="name" :label="__('sec_token_name')"
+                x-bind:placeholder="`{{ __('sec_production_token_placeholder') }} ${providerName} {{ __('sec_token') }}`" />
+            <x-forms.input required type="password" id="token" :label="__('sec_api_token')"
+                placeholder="{{ __('sec_paste_provider_token') }}" />
             <div class="lg:col-span-2">
-                <x-forms.textarea id="description" label="Description" rows="3"
-                    placeholder="Optional notes about where this token is used" />
+                <x-forms.textarea id="description" :label="__('sec_description')" rows="3"
+                    placeholder="{{ __('sec_optional_notes') }}" />
             </div>
         </div>
 
@@ -47,7 +43,7 @@
             <x-forms.button type="submit"
                 class="button-highlighted"
                 wire:target="addToken">
-                Validate and add
+                {{ __('sec_validate_add') }}
             </x-forms.button>
         </div>
     </form>

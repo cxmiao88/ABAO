@@ -1,6 +1,6 @@
 <div>
     <x-slot:title>
-        {{ __('server.sub_tls_certificates') }} | Coolify
+        {{ __('server.sub_tls_certificates') }} | ABao
     </x-slot>
     <livewire:server.navbar :server="$server" />
     <div

@@ -25,7 +25,7 @@
             <x-reicon name="search"
                 class="pointer-events-none absolute top-1/2 left-4 size-3 -translate-y-1/2 text-neutral-400 dark:text-fg-faint" />
             <input x-ref="search" x-model.debounce.150ms="search" type="search"
-                autocomplete="off" placeholder="Search {{ strtolower($title) }}"
+                autocomplete="off" placeholder="{{ __('crumb_search', ['title' => strtolower($title)]) }}"
                 class="searchable-listbox-search-input" @keydown.escape.stop="open = false">
         </div>
         <div class="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-neutral-400 dark:text-fg-faint">

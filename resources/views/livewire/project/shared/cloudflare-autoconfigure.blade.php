@@ -6,9 +6,9 @@
 
 <div x-data="{ dnsEntriesOpen: false }" class="relative" @click.outside="dnsEntriesOpen = false">
     <button type="button" class="button" @click="dnsEntriesOpen = !dnsEntriesOpen" aria-haspopup="menu"
-        x-bind:aria-expanded="dnsEntriesOpen" title="DNS entries for this server">
+        x-bind:aria-expanded="dnsEntriesOpen" title="{{ __('application.dns_title_for_server') }}">
         <x-reicon name="globe" class="size-3.5" />
-        DNS entries
+        {{ __('application.dns_entries') }}
         <span class="inline-flex transition-transform" :class="dnsEntriesOpen && 'rotate-180'">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2"
                 stroke="currentColor" class="size-3.5 shrink-0 opacity-60">
@@ -28,7 +28,7 @@
         <button type="button" class="listbox-option justify-start! gap-2.5!" role="menuitem"
             wire:click="openManualDnsRecords" @click="dnsEntriesOpen = false">
             <x-reicon name="documentation" class="size-3.5 shrink-0 opacity-70" />
-            Manual records
+            {{ __('application.dns_manual_records') }}
         </button>
     </div>
 </div>
@@ -56,7 +56,7 @@
                         class="application-settings-form application-settings-section relative flex w-full max-w-lg flex-col overflow-hidden"
                         style="box-shadow: 0 0 0 1px var(--coollabs-hairline), var(--shadow-modal)">
                         <header class="flex-nowrap!">
-                            <h3 class="min-w-0 flex-1 truncate">Configure DNS on Cloudflare</h3>
+                            <h3 class="min-w-0 flex-1 truncate">{{ __('application.dns_configure_cloudflare') }}</h3>
                             <button type="button" wire:click="closeCloudflareAutoconfigureModal"
                                 class="icon-button shrink-0" aria-label="Close">
                                 <x-reicon name="x" class="size-4" />
@@ -67,12 +67,11 @@
                                 $cloudflareHosts = $this->allDomainHostnames();
                             @endphp
                             <p class="text-sm leading-6 text-neutral-600 dark:text-fg-dim">
-                                Opens Cloudflare Domain Connect for every domain on this resource, with A records
-                                prefilled to this server’s IP. Authorize each change in Cloudflare.
+                                {{ __('application.dns_cloudflare_helper') }}
                             </p>
 
                             <div>
-                                <p class="mb-1.5 text-sm font-medium text-black dark:text-white">Domains</p>
+                                <p class="mb-1.5 text-sm font-medium text-black dark:text-white">{{ __('application.dns_domains') }}</p>
                                 <ul
                                     class="max-h-40 space-y-1 overflow-y-auto rounded-md border border-neutral-200 bg-neutral-50 px-3 py-2 font-mono text-[13px] text-black dark:border-coolgray-300 dark:bg-coolgray-100 dark:text-fg">
                                     @foreach ($cloudflareHosts as $host)
@@ -81,17 +80,17 @@
                                 </ul>
                             </div>
 
-                            <x-forms.input label="Server IP (A record target)"
-                                value="{{ $this->publicServerIpForDomainConnect() ?: 'Unavailable' }}" readonly
-                                helper="This IP is taken from the destination server." />
+                            <x-forms.input label="{{ __('application.dns_server_ip') }}"
+                                value="{{ $this->publicServerIpForDomainConnect() ?: __('application.dns_unavailable') }}" readonly
+                                helper="{{ __('application.dns_server_ip_helper') }}" />
 
                             <div class="flex flex-wrap items-center justify-end gap-2 pt-2">
                                 <x-forms.button type="button" wire:click="closeCloudflareAutoconfigureModal">
-                                    Cancel
+                                    {{ __('application.dns_cancel') }}
                                 </x-forms.button>
                                 <x-forms.button type="button" wire:click="applyCloudflareAutoconfigure"
                                     isHighlighted>
-                                    Open Cloudflare
+                                    {{ __('application.dns_open_cloudflare') }}
                                     <x-external-link class="size-3 opacity-70" />
                                 </x-forms.button>
                             </div>
@@ -149,7 +148,7 @@
                     class="application-settings-form application-settings-section relative flex w-full max-w-2xl flex-col overflow-hidden"
                     style="box-shadow: 0 0 0 1px var(--coollabs-hairline), var(--shadow-modal)">
                     <header class="flex-nowrap!">
-                        <h3 class="min-w-0 flex-1 truncate">DNS entries</h3>
+                        <h3 class="min-w-0 flex-1 truncate">{{ __('application.dns_entries') }}</h3>
                         <button type="button" @click="closeDnsRecords()"
                             class="icon-button shrink-0" aria-label="Close">
                             <x-reicon name="x" class="size-4" />
@@ -157,22 +156,21 @@
                     </header>
                     <div class="application-settings-section-body flex flex-col gap-4">
                         <p class="text-sm leading-6 text-neutral-600 dark:text-fg-dim">
-                            Hosts that still need DNS at your provider (working domains are omitted). Create matching
-                            Type / Name / Value records so traffic reaches this server.
+                            {{ __('application.dns_hosts_helper') }}
                         </p>
 
                         @if (blank($serverIp) && count($dnsHints) === 0)
-                            <x-callout type="warning" title="No server IP">
-                                Could not determine a public IP for this destination. Set the server IP (or instance public IPv4 for localhost) first.
+                            <x-callout type="warning" title="{{ __('application.dns_no_server_ip') }}">
+                                {{ __('application.dns_no_server_ip_body') }}
                             </x-callout>
                         @elseif (count($dnsHints) === 0)
-                            <x-callout type="info" title="Nothing to configure">
-                                No pending DNS entries. All listed domains already resolve correctly, or no domains are configured yet.
-                                Use Recheck after changing DNS.
+                            <x-callout type="info" title="{{ __('application.dns_nothing') }}">
+                                {{ __('application.dns_no_pending') }}
+                                {{ __('application.dns_recheck') }}
                             </x-callout>
                         @else
                             @if (collect($dnsProviderProposals)->isNotEmpty() && collect($dnsHints)->contains(fn (array $record): bool => ! \App\Support\DnsRecordHints::isPublicAddress($record['value'])))
-                                <x-callout type="warning" title="No public IP">
+                                <x-callout type="warning" title="{{ __('application.dns_no_public_ip') }}">
                                     {{ \App\Support\DnsRecordHints::NO_PUBLIC_ADDRESS_MESSAGE }}
                                 </x-callout>
                             @endif
@@ -181,10 +179,10 @@
                                     <thead
                                         class="bg-neutral-50 text-[12px] uppercase tracking-wide text-neutral-500 dark:bg-coolgray-100 dark:text-fg-dim">
                                         <tr>
-                                            <th class="px-3 py-2 font-medium">Type</th>
-                                            <th class="px-3 py-2 font-medium">Name</th>
-                                            <th class="px-3 py-2 font-medium">Value</th>
-                                            <th class="px-3 py-2 font-medium"><span class="sr-only">Action</span></th>
+                                            <th class="px-3 py-2 font-medium">{{ __('application.dns_type') }}</th>
+                                            <th class="px-3 py-2 font-medium">{{ __('application.dns_name') }}</th>
+                                            <th class="px-3 py-2 font-medium">{{ __('application.dns_value') }}</th>
+                                            <th class="px-3 py-2 font-medium"><span class="sr-only">{{ __('application.dns_action') }}</span></th>
                                         </tr>
                                     </thead>
                                     <tbody class="divide-y divide-neutral-200 dark:divide-coolgray-300">

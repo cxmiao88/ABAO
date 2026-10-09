@@ -1,6 +1,6 @@
 <x-layout-simple>
     <x-auth.shell title="{{ __('auth.reset_password') }}"
-        description="Choose a strong new password for your Coolify account.">
+        description="{{ __('auth2_reset_desc') }}">
         <div class="flex flex-col gap-4">
             @if (session('status'))
                 <x-auth.alert type="success">{{ session('status') }}</x-auth.alert>
@@ -27,7 +27,7 @@
 
                 <div class="auth-guidance">
                     <x-reicon name="info-circle" class="mt-0.5 size-4 shrink-0" />
-                    <p>Use at least 8 characters with uppercase, lowercase, number, and symbol.</p>
+                    <p>{{ __('auth2_password_guidance') }}</p>
                 </div>
 
                 <x-forms.button class="w-full justify-center" type="submit" isHighlighted>
@@ -37,8 +37,8 @@
         </div>
 
         <x-slot:footer>
-            <span>Remember your password?</span>
-            <a href="/login" class="auth-text-link">Back to login</a>
+            <span>{{ __('auth2_remember_password') }}</span>
+            <a href="/login" class="auth-text-link">{{ __('auth2_back_to_login') }}</a>
         </x-slot:footer>
     </x-auth.shell>
 </x-layout-simple>

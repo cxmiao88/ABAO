@@ -8,16 +8,16 @@
 <div x-show="total > per" x-cloak
     class="flex items-center justify-between gap-3 border-t border-neutral-200 px-4 py-2 dark:border-white/[0.07]">
     <span class="text-[11px] text-neutral-500 dark:text-fg-faint"
-        x-text="`${page * per + 1}–${Math.min((page + 1) * per, total)} of ${total.toLocaleString()}`"></span>
+        x-text="`${page * per + 1}–${Math.min((page + 1) * per, total)} {{ __('anl_of') }} ${total.toLocaleString()}`"></span>
     <div class="flex items-center gap-1">
         <button type="button" @click="page = Math.max(0, page - 1)" :disabled="page === 0"
             class="flex h-6 items-center rounded-md px-2 text-[11px] font-medium text-neutral-500 transition-colors hover:text-black disabled:cursor-not-allowed disabled:opacity-30 dark:text-fg-faint dark:hover:text-fg">
-            Prev
+            {{ __('anl_prev') }}
         </button>
         <button type="button" @click="page = Math.min(Math.ceil(total / per) - 1, page + 1)"
             :disabled="(page + 1) * per >= total"
             class="flex h-6 items-center rounded-md px-2 text-[11px] font-medium text-neutral-500 transition-colors hover:text-black disabled:cursor-not-allowed disabled:opacity-30 dark:text-fg-faint dark:hover:text-fg">
-            Next
+            {{ __('anl_next') }}
         </button>
     </div>
 </div>

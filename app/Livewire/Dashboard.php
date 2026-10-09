@@ -11,6 +11,8 @@ use Livewire\Component;
 
 class Dashboard extends Component
 {
+    public string $dashboardMode = 'baota';
+
     public Collection $projects;
 
     public Collection $servers;
@@ -19,6 +21,7 @@ class Dashboard extends Component
 
     public function mount()
     {
+        $this->dashboardMode = session('dashboard_mode', 'baota') === 'classic' ? 'classic' : 'baota';
         $this->privateKeys = PrivateKey::ownedByCurrentTeamCached();
         $this->servers = Server::ownedByCurrentTeamCached();
         $this->projects = Project::ownedByCurrentTeam()
@@ -37,6 +40,15 @@ class Dashboard extends Component
                 'sqlites',
             ])
             ->get();
+    }
+
+    public function switchDashboardMode(string $mode): void
+    {
+        if (! in_array($mode, ['baota', 'classic'], true)) {
+            return;
+        }
+        $this->dashboardMode = $mode;
+        session(['dashboard_mode' => $mode]);
     }
 
     public function render()

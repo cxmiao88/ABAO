@@ -1,6 +1,6 @@
 <div class="application-settings-form w-full">
     <x-slot:title>
-        {{ __('nav.dashboard') }} | Coolify
+        {{ __('nav.dashboard') }} | ABao
     </x-slot>
 
     @if (session('error'))
@@ -17,6 +17,37 @@
             fn ($server) => method_exists($server, 'isTrafficAnalyticsEnabled') && $server->isTrafficAnalyticsEnabled()
         );
     @endphp
+    {{-- 仪表盘模式切换 --}}
+    <div class="mb-2 flex min-w-0 items-center gap-2">
+        <div class="inline-flex items-center rounded-lg border border-neutral-200 bg-white p-1 shadow-sm dark:border-white/[0.08] dark:bg-white/[0.04]">
+            <button type="button" wire:click="switchDashboardMode('baota')"
+                @class([
+                    'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors',
+                    'bg-emerald-600 text-white shadow-sm' => $dashboardMode === 'baota',
+                    'text-neutral-500 hover:bg-neutral-100 dark:text-fg-dim dark:hover:bg-white/[0.06]' => $dashboardMode !== 'baota',
+                ])>
+                <x-reicon name="servers" class="size-3.5" />
+                {{ __('dash_mode_baota') }}
+            </button>
+            <button type="button" wire:click="switchDashboardMode('classic')"
+                @class([
+                    'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors',
+                    'bg-neutral-800 text-white shadow-sm dark:bg-white dark:text-neutral-900' => $dashboardMode === 'classic',
+                    'text-neutral-500 hover:bg-neutral-100 dark:text-fg-dim dark:hover:bg-white/[0.06]' => $dashboardMode !== 'classic',
+                ])>
+                <x-reicon name="grid" class="size-3.5" />
+                {{ __('dash_mode_classic') }}
+            </button>
+        </div>
+    </div>
+
+    @if ($dashboardMode === 'baota')
+        @include('livewire.dashboard.baota', [
+            'servers' => $servers,
+            'projects' => $projects,
+            'dashboardServers' => $dashboardServers,
+        ])
+    @else
 
     <div class="flex min-w-0 flex-col gap-8">
         @if ($pendingInvitations->isNotEmpty())
@@ -199,7 +230,7 @@
 
                         <a href="{{ route('server.show', ['server_uuid' => $server->uuid]) }}"
                             {{ wireNavigate() }} aria-label="{{ __('project.open') }} {{ $server->name }}"
-                            class="group relative flex min-h-28 min-w-0 flex-col rounded-xl border border-neutral-200 bg-white p-3 shadow-sm transition-all hover:-translate-y-px hover:border-neutral-300 hover:shadow-md dark:border-white/[0.08] dark:bg-white/[0.05] dark:hover:border-white/[0.14]">
+                            class="group relative flex min-h-44 min-w-0 flex-col rounded-xl border border-neutral-200 bg-white p-3 shadow-sm transition-all hover:-translate-y-px hover:border-neutral-300 hover:shadow-md dark:border-white/[0.08] dark:bg-white/[0.05] dark:hover:border-white/[0.14]">
                             @if ($server->isMetricsEnabled())
                                 <livewire:dashboard.server-metrics-chart :server="$server"
                                     :key="'dashboard-server-metrics-'.$server->uuid" />
@@ -231,10 +262,14 @@
                                     </span>
                                 @endif
                             </div>
+
+                            <livewire:dashboard.server-status :server="$server"
+                                :key="'dashboard-server-status-'.$server->uuid" />
                         </a>
                     @endforeach
                 </div>
             @endif
         </section>
-    </div>
+        </div>
+    @endif
 </div>

@@ -1,0 +1,21 @@
+1044-                                            <?php echo e(__('server.power_on')); ?>
+1045-
+1046-                                         <?php echo $__env->renderComponent(); ?>
+1047-<?php endif; ?>
+1048-<?php if (isset($__attributesOriginal039608dc70b2e4c26356f5d84408f584)): ?>
+1049-<?php $attributes = $__attributesOriginal039608dc70b2e4c26356f5d84408f584; ?>
+1050-<?php unset($__attributesOriginal039608dc70b2e4c26356f5d84408f584); ?>
+1051-<?php endif; ?>
+1052-<?php if (isset($__componentOriginal039608dc70b2e4c26356f5d84408f584)): ?>
+1053-<?php $component = $__componentOriginal039608dc70b2e4c26356f5d84408f584; ?>
+1054-<?php unset($__componentOriginal039608dc70b2e4c26356f5d84408f584); ?>
+1055-<?php endif; ?>
+1056-                                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+1057-                                <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+1058-                            <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+1059:                            <?php echo $__env->make('livewire.server.system-overview-partial', ['stats' => $serverStats], array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+1060-
+1061-                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($server->server_metadata): ?>
+1062-                                <?php if (isset($component)) { $__componentOriginal039608dc70b2e4c26356f5d84408f584 = $component; } ?>
+1063-<?php if (isset($attributes)) { $__attributesOriginal039608dc70b2e4c26356f5d84408f584 = $attributes; } ?>
+1064-<?php $component = App\View\Components\Forms\Button::resolve([] + (isset($attributes) && $attributes instanceof Illuminate\View\ComponentAttributeBag ? $attributes->all() : [])); ?>

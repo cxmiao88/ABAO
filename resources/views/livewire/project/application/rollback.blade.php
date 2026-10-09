@@ -1,32 +1,31 @@
 <div class="flex flex-col gap-6" x-init="$wire.loadImages">
     <form wire:submit="saveSettings" class="application-settings-form flex flex-col">
         <x-unsaved-bar action="saveSettings" />
-        <x-application.settings-section id="rollback-retention-section" title="Image retention"
-            helper="Keep previously built Docker images available for fast rollbacks.">
+        <x-application.settings-section id="rollback-retention-section" title="{{ __('application.rb_retention') }}"
+            helper="{{ __('application.rb_retention_helper') }}">
             @if ($serverRetentionDisabled)
                 <div class="mb-4">
-                    <x-callout type="warning" title="Disabled by the server">
-                        Image retention is disabled at the server level. This setting has no effect until a server
-                        administrator enables it.
+                    <x-callout type="warning" title="{{ __('application.rb_disabled_title') }}">
+                        {{ __('application.rb_disabled_body') }}
                     </x-callout>
                 </div>
             @endif
 
             <div class="max-w-sm">
                 <x-forms.input id="dockerImagesToKeep" type="number" min="0" max="100"
-                    label="Images to keep"
-                    helper="Set to 0 to keep only the running image. Pull request images are always removed during cleanup."
+                    label="{{ __('application.rb_images_to_keep') }}"
+                    helper="{{ __('application.rb_images_helper') }}"
                     canGate="update" :canResource="$application" :disabled="$serverRetentionDisabled" />
             </div>
         </x-application.settings-section>
     </form>
 
-    <x-application.settings-section id="rollback-images-section" title="Available images"
-        helper="Rollback uses an existing local image without rebuilding the application." flush>
+    <x-application.settings-section id="rollback-images-section" title="{{ __('application.rb_available') }}"
+        helper="{{ __('application.rb_available_helper') }}" flush>
         <x-slot:actions>
             @can('view', $application)
                 <x-forms.button wire:click="loadImages(true)">
-                    Reload images
+                    {{ __('application.rb_reload') }}
                 </x-forms.button>
             @endcan
         </x-slot:actions>
@@ -54,37 +53,37 @@
                                 {{ $tag }}
                             </code>
                             @if ($isCurrent)
-                                <x-status-badge status="Running image" type="success" />
+                                <x-status-badge status="{{ __('application.rb_running_image') }}" type="success" />
                             @elseif (!$isRollbackable)
-                                <x-status-badge status="Rollback unavailable" type="neutral" />
+                                <x-status-badge status="{{ __('application.rb_unavailable') }}" type="neutral" />
                             @endif
                         </div>
                         <p class="mt-1 text-xs text-neutral-500 dark:text-fg-dim">
-                            Built {{ $createdAt->diffForHumans() }}
+                            {{ __('application.rb_built', ['time' => $createdAt->diffForHumans()]) }}
                             <span class="mx-1 text-neutral-300 dark:text-fg-faint">·</span>
                             {{ $date }}
                         </p>
                     </div>
                     @can('deploy', $application)
                         @if ($isCurrent)
-                            <x-forms.button disabled tooltip="This image is currently running.">
-                                Rollback
+                            <x-forms.button disabled tooltip="{{ __('application.rb_tooltip_running') }}">
+                                {{ __('application.rb_rollback') }}
                             </x-forms.button>
                         @elseif (!$isRollbackable)
                             <x-forms.button disabled
-                                tooltip="Only commit and pull-request image tags support rollback.">
-                                Rollback
+                                tooltip="{{ __('application.rb_tooltip_only_tags') }}">
+                                {{ __('application.rb_rollback') }}
                             </x-forms.button>
                         @else
                             <x-forms.button wire:click="rollbackImage('{{ $tag }}')">
-                                Roll back to this image
+                                {{ __('application.rb_rollback_to') }}
                             </x-forms.button>
                         @endif
                     @endcan
                 </div>
             @empty
-                <x-empty title="No rollback images"
-                    description="No previous application images are currently stored on this server."
+                <x-empty title="{{ __('application.rb_no_images') }}"
+                    description="{{ __('application.rb_no_images_desc') }}"
                     icon-name="layers" />
             @endforelse
         </div>
@@ -92,7 +91,7 @@
         <div class="w-full" wire:target="loadImages" wire:loading>
             <div class="flex items-center justify-center gap-2 px-4 py-10 text-[13px] text-neutral-500 dark:text-fg-dim">
                 <x-loading class="size-4" />
-                Loading available images…
+                {{ __('application.rb_loading') }}
             </div>
         </div>
     </x-application.settings-section>

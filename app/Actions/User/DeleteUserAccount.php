@@ -31,7 +31,7 @@ class DeleteUserAccount
     public function blockers(User $user, bool $removeTeamResources = false): array
     {
         if ($user->id === 0) {
-            return ['The root user cannot be deleted.'];
+            return [__('user.blocker_root')];
         }
 
         $blockers = [];
@@ -42,7 +42,7 @@ class DeleteUserAccount
 
             if ($team->id === 0) {
                 if ($isAlone) {
-                    $blockers[] = 'You are the only member of the root team.';
+                    $blockers[] = __('user.blocker_root_team_alone');
                 }
 
                 continue;
@@ -54,7 +54,7 @@ class DeleteUserAccount
 
             if ($isAlone) {
                 if (! $removeTeamResources && ! $team->isEmpty()) {
-                    $blockers[] = "Delete all projects, servers, and Git sources of the team \"{$team->name}\".";
+                    $blockers[] = __('user.blocker_delete_team_resources', ['team' => $team->name]);
                 }
 
                 continue;
@@ -65,7 +65,7 @@ class DeleteUserAccount
             );
 
             if (! $hasReplacementOwner) {
-                $blockers[] = "Make another member of the team \"{$team->name}\" an admin or owner.";
+                $blockers[] = __('user.blocker_promote_owner', ['team' => $team->name]);
             }
         }
 
@@ -80,7 +80,7 @@ class DeleteUserAccount
 
         foreach ($this->subscriptionTeams($user) as $team) {
             if (! CancelSubscription::cancelById($team->subscription->stripe_subscription_id)) {
-                throw new RuntimeException("Could not cancel the subscription of the team \"{$team->name}\". Your account was not deleted. Please try again.");
+                throw new RuntimeException(__('user.sub_cancel_failed', ['team' => $team->name]));
             }
         }
 
@@ -125,8 +125,8 @@ class DeleteUserAccount
     public function confirmationActions(User $user): array
     {
         return $this->subscriptionTeams($user)
-            ->map(fn (Team $team): string => "The subscription of the team \"{$team->name}\" will be cancelled immediately. This is required.")
-            ->push('Your account will be permanently deleted from Coolify.')
+            ->map(fn (Team $team): string => __('user.confirm_sub_cancel', ['team' => $team->name]))
+            ->push(__('user.confirm_account_deleted'))
             ->values()
             ->all();
     }

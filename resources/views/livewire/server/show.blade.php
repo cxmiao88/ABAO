@@ -1,7 +1,8 @@
+{{-- TOP-MARKER-555 --}}
 <div x-data
     x-init="@if ($server->hetzner_server_id && $server->cloudProviderToken && !$hetznerServerStatus) $wire.checkHetznerServerStatus(); @endif @if ($server->vultr_instance_id && $server->cloudProviderToken) $wire.checkVultrInstanceStatus(); @endif @if ($server->digitalocean_droplet_id && $server->cloudProviderToken && !$digitalOceanDropletStatus) $wire.checkDigitalOceanDropletStatus(); @endif">
     <x-slot:title>
-        {{ data_get_str($server, 'name')->limit(24) }} | {{ __('server.page_title') }} | Coolify
+        {{ data_get_str($server, 'name')->limit(24) }} | {{ __('server.page_title') }} | ABao
     </x-slot>
 
     <livewire:server.navbar :server="$server" />
@@ -63,7 +64,7 @@
                     <x-unsaved-bar action="submit"
                         targets="name,description,ip,user,port,connectionTimeout,serverTimezone,wildcardDomain" />
 
-                    <x-application.settings-section id="server-connection-section" :title="__('server.connection_title')"
+                    <x-application.settings-section id="server-connection-section" data-marker="MARKER-CONNECTION-77" :title="__('server.connection_title')"
                         :helper="__('server.connection_helper')">
                         <x-slot:actions>
                             @if ($hasLinkableCloudProviders)
@@ -245,7 +246,8 @@
                         @endif
                     </x-application.settings-section>
 
-                    <x-application.settings-section id="server-overview-section" :title="__('server.overview_title')"
+
+                    <x-application.settings-section id="server-overview-section" data-marker="MARKER-OVERVIEW-88" :title="__('server.overview_title')"
                         :helper="__('server.overview_helper')">
                         <x-slot:actions>
                             @if ($provider)
@@ -289,7 +291,10 @@
                                     @endif
                                 @endif
                             @endif
-                            @if ($server->server_metadata)
+                            <div class="py-2 text-sm text-red-400">SYSTEM-OVERVIEW-MARKER-VISIBLE-999</div>
+                            @include('livewire.server.system-overview-partial', ['stats' => $serverStats])
+
+                        @if ($server->server_metadata)
                                 <x-forms.button type="button" class="size-8! px-0!"
                                     wire:click="refreshServerMetadata" :title="__('server.refresh_server_details')">
                                     <x-reicon name="refresh" class="size-3.5" />

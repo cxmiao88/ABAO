@@ -24,12 +24,12 @@
     $key = $key ?? '';
     $initialCategories = array_column($series ?? [], 'bucket');
     $label = match ($key) {
-        'requestsSpark' => 'Requests',
-        'uniquesSpark' => 'Visitors',
-        'bandwidthSpark' => 'Bandwidth',
-        'errorsSpark' => 'Errors',
-        'latencySpark' => 'p95 latency',
-        default => 'Value',
+        'requestsSpark' => __('anl_spark_requests'),
+        'uniquesSpark' => __('anl_spark_visitors'),
+        'bandwidthSpark' => __('anl_spark_bandwidth'),
+        'errorsSpark' => __('anl_spark_errors'),
+        'latencySpark' => __('anl_spark_latency'),
+        default => __('anl_spark_value'),
     };
 @endphp
 <div wire:ignore id="{!! $id !!}" class="h-9 w-full [&_.apexcharts-svg]:overflow-visible!"

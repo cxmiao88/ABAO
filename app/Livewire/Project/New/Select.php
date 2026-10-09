@@ -121,7 +121,20 @@ class Select extends Component
             ] + service_logo_urls(data_get($service, 'logo')) + (array) $service;
         })->all();
 
-        // Extract unique categories from services
+        // Extract unique categories from services, with a Chinese label for the UI.
+        // The value keeps the original English key so category filtering keeps working.
+        $categoryLabels = [
+            'mail' => '邮件', 'networking' => '网络', 'rss' => 'RSS 订阅', 'ai' => 'AI',
+            'analytics' => '分析统计', 'api' => 'API', 'auth' => '身份认证', 'automation' => '自动化',
+            'backend' => '后端', 'ci' => 'CI 持续集成', 'cms' => 'CMS 内容管理', 'communication' => '沟通协作',
+            'database' => '数据库', 'databases' => '数据库',
+            'developer-tools' => '开发工具', 'development' => '开发工具', 'devtools' => '开发工具',
+            'documentation' => '文档', 'email' => '电子邮件', 'family' => '家庭生活', 'finance' => '财务管理',
+            'games' => '游戏', 'git' => '代码托管', 'health' => '健康', 'helpdesk' => '客服工单',
+            'mcp' => 'MCP', 'media' => '多媒体', 'messaging' => '即时通讯', 'monitoring' => '监控告警',
+            'observability' => '可观测性', 'productivity' => '效率工具', 'proxy' => '代理', 'search' => '搜索',
+            'security' => '安全防护', 'storage' => '存储', 'vpn' => 'VPN',
+        ];
         $categories = collect($services)
             ->pluck('category')
             ->filter()
@@ -136,18 +149,16 @@ class Select extends Component
             })
             ->flatten()
             ->unique()
-            ->map(function ($category) {
+            ->map(function ($category) use ($categoryLabels) {
                 // Format common acronyms to uppercase
                 $acronyms = ['ai', 'api', 'ci', 'cd', 'cms', 'crm', 'erp', 'iot', 'vpn', 'vps', 'dns', 'ssl', 'tls', 'ssh', 'ftp', 'http', 'https', 'smtp', 'imap', 'pop3', 'sql', 'nosql', 'json', 'xml', 'yaml', 'csv', 'pdf', 'sms', 'mfa', '2fa', 'oauth', 'saml', 'jwt', 'rest', 'soap', 'grpc', 'graphql', 'websocket', 'webrtc', 'p2p', 'b2b', 'b2c', 'seo', 'sem', 'ppc', 'roi', 'kpi', 'ui', 'ux', 'ide', 'sdk', 'api', 'cli', 'gui', 'cdn', 'ddos', 'dos', 'xss', 'csrf', 'sqli', 'rce', 'lfi', 'rfi', 'ssrf', 'xxe', 'idor', 'owasp', 'gdpr', 'hipaa', 'pci', 'dss', 'iso', 'nist', 'cve', 'cwe', 'cvss'];
                 $lower = strtolower($category);
+                $value = in_array($lower, $acronyms) ? strtoupper($category) : $category;
+                $label = $categoryLabels[strtolower($value)] ?? $value;
 
-                if (in_array($lower, $acronyms)) {
-                    return strtoupper($category);
-                }
-
-                return $category;
+                return ['value' => $value, 'label' => $label];
             })
-            ->sort(SORT_NATURAL | SORT_FLAG_CASE)
+            ->sortBy('label')
             ->values()
             ->all();
         $gitBasedApplications = [

@@ -129,14 +129,14 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@coolifyio" />
-    <meta name="twitter:title" content="Coolify" />
+    <meta name="twitter:title" content="ABao" />
     <meta name="twitter:description" content="An open-source & self-hostable Heroku / Netlify / Vercel alternative." />
     <meta name="twitter:image" content="https://cdn.coollabs.io/og-images/coolify.png" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://coolify.io" />
-    <meta property="og:title" content="Coolify" />
+    <meta property="og:title" content="ABao" />
     <meta property="og:description" content="An open-source & self-hostable Heroku / Netlify / Vercel alternative." />
-    <meta property="og:site_name" content="Coolify" />
+    <meta property="og:site_name" content="ABao" />
     <meta property="og:image" content="https://cdn.coollabs.io/og-images/coolify.png" />
     @use('App\Models\InstanceSettings')
     @php
@@ -152,7 +152,7 @@
             }
         }
     @endphp
-    <title>{{ $name }}{{ $title ?? 'Coolify' }}</title>
+    <title>{{ $name }}{{ $title ?? 'ABao' }}</title>
     @env('local')
         <link rel="icon" href="{{ asset('coolify-logo-dev-transparent.png') }}" type="image/png" />
     @else
@@ -161,7 +161,7 @@
     @endenv
     <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}" />
     <link rel="manifest" href="{{ asset('site.webmanifest') }}" />
-    <meta name="apple-mobile-web-app-title" content="Coolify" />
+    <meta name="apple-mobile-web-app-title" content="ABao" />
     <meta name="csrf-token" content="{{ csrf_token() }}">
     @vite(['resources/js/app.js', 'resources/css/app.css'])
     <script>

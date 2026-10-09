@@ -6,7 +6,7 @@
     },
 }"
     @close-email-change-modal.window="emailModalOpen = false">
-    <x-slot:title>Profile | Coolify</x-slot>
+    <x-slot:title>{{ __('prof_title') }}</x-slot>
     <div class="mt-8 flex w-full max-w-none flex-col gap-6 lg:mt-3">
         <section class="application-settings-section" x-data="{
             preview: null,
@@ -65,30 +65,30 @@
                             }
                         } catch (error) {
                             URL.revokeObjectURL(previewUrl);
-                            this.uploadError = 'The image could not be uploaded.';
+                            this.uploadError = '{{ __("prof_upload_error") }}';
                         } finally {
                             this.processing = false;
                         }
                     }, () => {
                         URL.revokeObjectURL(previewUrl);
                         this.processing = false;
-                        this.uploadError = 'The image could not be uploaded.';
+                        this.uploadError = '{{ __("prof_upload_error") }}';
                     });
                 } catch (error) {
                     this.processing = false;
-                    this.uploadError = 'The image could not be processed in this browser.';
+                    this.uploadError = '{{ __("prof_process_error") }}';
                 }
             },
         }">
             <div class="application-settings-section-header">
                 <div>
-                    <h2>Profile picture</h2>
-                    <p>Upload a JPG, PNG, or WebP image.</p>
+                    <h2>{{ __('prof_picture') }}</h2>
+                    <p>{{ __('prof_picture_desc') }}</p>
                 </div>
             </div>
             <div class="application-settings-section-body flex flex-col gap-4 sm:flex-row sm:items-center">
                 <div class="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-neutral-200 text-2xl font-semibold text-neutral-700 dark:bg-white/[0.1] dark:text-fg">
-                    <img x-cloak x-show="preview" :src="preview" alt="Profile picture preview"
+                    <img x-cloak x-show="preview" :src="preview" alt="{{ __('prof_picture_preview') }}"
                         class="h-full w-full object-cover">
                     @if (auth()->user()->avatar_path)
                         <img src="{{ profile_avatar_url(auth()->user()) }}"
@@ -105,11 +105,11 @@
                             accept="image/jpeg,image/png,image/webp" class="hidden">
                         <x-forms.button type="button" x-on:click="$refs.avatarInput.click()"
                             x-bind:disabled="processing">
-                            <span x-text="processing ? 'Uploading…' : 'Browse…'"></span>
+                            <span x-text="processing ? '{{ __("prof_uploading") }}' : '{{ __("prof_browse") }}'"></span>
                         </x-forms.button>
                         @if (auth()->user()->avatar_path)
                             <x-forms.button type="button" wire:click="removeAvatar" x-bind:disabled="processing"
-                                isError>Remove</x-forms.button>
+                                isError>{{ __('prof_remove') }}</x-forms.button>
                         @endif
                     </div>
                     <p x-cloak x-show="uploadError" x-text="uploadError" class="text-xs text-red-500"></p>
@@ -125,17 +125,17 @@
             <section class="application-settings-section">
                 <div class="application-settings-section-header">
                     <div>
-                        <h2>Profile details</h2>
-                        <p>Your display name and verified sign-in address.</p>
+                        <h2>{{ __('prof_details') }}</h2>
+                        <p>{{ __('prof_details_desc') }}</p>
                     </div>
                 </div>
                 <div class="application-settings-section-body grid gap-4 sm:grid-cols-2">
-                    <x-forms.input id="name" label="Name" required />
+                    <x-forms.input id="name" :label="__('prof_name')" required />
                     <div class="flex items-end gap-2">
-                        <x-forms.input id="email" label="Email" readonly />
+                        <x-forms.input id="email" :label="__('prof_email')" readonly />
                         <x-forms.button @click="openEmailModal()" type="button"
                             :disabled="$uses_sso" x-bind:disabled="emailModalOpen || @js($uses_sso)">
-                            Change
+                            {{ __('prof_change') }}
                         </x-forms.button>
                     </div>
                 </div>
@@ -145,8 +145,8 @@
          <section class="application-settings-section">
              <div class="application-settings-section-header">
                  <div>
-                     <h2>Language</h2>
-                     <p>Interface display language.</p>
+                     <h2>{{ __('prof_language') }}</h2>
+                     <p>{{ __('prof_language_desc') }}</p>
                  </div>
              </div>
              <div class="application-settings-section-body">
@@ -155,8 +155,8 @@
          </section>
 
          @if ($uses_sso)
-             <x-callout type="info" title="Email managed by SSO">
-                 Signed in with SSO @if ($sso_provider_label) ({{ $sso_provider_label }}) @endif. Email is managed by your SSO provider.
+             <x-callout type="info" :title="__('prof_sso_title')">
+                 {!! __('prof_sso_desc', ['provider' => $sso_provider_label ?: __('prof_sso_provider')]) !!}
              </x-callout>
          @endif
 
@@ -170,41 +170,40 @@
                     style="box-shadow: 0 0 0 1px var(--coollabs-hairline), var(--shadow-modal)">
                     <header>
                         <div>
-                            <h3>{{ $show_verification ? 'Verify new email' : 'Change email' }}</h3>
+                            <h3>{{ $show_verification ? __('prof_verify_new_email') : __('prof_change_email') }}</h3>
                             <p class="mt-1 text-xs text-neutral-500 dark:text-fg-dim">
                                 @if ($show_verification)
-                                    Code sent to {{ $new_email ?: auth()->user()->pending_email }}.
+                                    {{ __('prof_code_sent', ['email' => $new_email ?: auth()->user()->pending_email]) }}
                                 @else
-                                    A six-digit verification code will be sent to the new address.
+                                    {{ __('prof_code_will_send') }}
                                 @endif
                             </p>
                         </div>
                         <button type="button"
                             @click="@if ($show_verification) $wire.cancelEmailChange().then(() => emailModalOpen = false) @else emailModalOpen = false @endif"
-                            class="icon-button shrink-0" aria-label="Close">
+                            class="icon-button shrink-0" aria-label="{{ __('prof_close') }}">
                             <x-reicon name="x" class="size-4" />
                         </button>
                     </header>
 
                     @if ($show_verification)
                         <form wire:submit="verifyEmailChange" class="application-settings-section-body space-y-4">
-                            <x-forms.input id="email_verification_code" label="Verification code" required
+                            <x-forms.input id="email_verification_code" :label="__('prof_verification_code')" required
                                 inputmode="numeric" maxlength="6" />
                             <p class="text-xs text-neutral-500 dark:text-fg-dim">
-                                The code expires after
-                                {{ config('constants.email_change.verification_code_expiry_minutes', 10) }} minutes.
+                                {{ __('prof_code_expires', ['minutes' => config('constants.email_change.verification_code_expiry_minutes', 10)]) }}
                             </p>
                             <div class="flex justify-end gap-2">
-                                <x-forms.button wire:click="resendVerificationCode" type="button">Resend code</x-forms.button>
-                                <x-forms.button type="submit" isHighlighted>Verify email</x-forms.button>
+                                <x-forms.button wire:click="resendVerificationCode" type="button">{{ __('prof_resend_code') }}</x-forms.button>
+                                <x-forms.button type="submit" isHighlighted>{{ __('prof_verify_email') }}</x-forms.button>
                             </div>
                         </form>
                     @else
                         <form wire:submit="requestEmailChange" class="application-settings-section-body space-y-4">
-                            <x-forms.input id="new_email" label="New email address" required type="email"
+                            <x-forms.input id="new_email" :label="__('prof_new_email')" required type="email"
                                 x-ref="newEmailInput" />
                             <div class="flex justify-end">
-                                <x-forms.button type="submit" isHighlighted>Send code</x-forms.button>
+                                <x-forms.button type="submit" isHighlighted>{{ __('prof_send_code') }}</x-forms.button>
                             </div>
                         </form>
                     @endif
@@ -217,16 +216,16 @@
             <section class="application-settings-section">
                 <div class="application-settings-section-header">
                     <div>
-                        <h2>Password</h2>
-                        <p>Changing your password signs out every active session.</p>
+                        <h2>{{ __('prof_password') }}</h2>
+                        <p>{{ __('prof_password_desc') }}</p>
                     </div>
-                    <x-forms.button type="submit">Change password</x-forms.button>
+                    <x-forms.button type="submit">{{ __('prof_change_password') }}</x-forms.button>
                 </div>
                 <div class="application-settings-section-body grid gap-4 sm:grid-cols-2">
-                    <x-forms.input class="sm:col-span-2" id="current_password" label="Current password"
+                    <x-forms.input class="sm:col-span-2" id="current_password" :label="__('prof_current_password')"
                         required type="password" />
-                    <x-forms.input id="new_password" label="New password" required type="password" />
-                    <x-forms.input id="new_password_confirmation" label="Confirm new password" required
+                    <x-forms.input id="new_password" :label="__('prof_new_password')" required type="password" />
+                    <x-forms.input id="new_password_confirmation" :label="__('prof_confirm_password')" required
                         type="password" />
                 </div>
             </section>
@@ -235,15 +234,15 @@
         <section class="application-settings-section">
             <div class="application-settings-section-header">
                 <div>
-                    <h2>Two-factor authentication</h2>
-                    <p>Add a time-based one-time password to protect your account.</p>
+                    <h2>{{ __('prof_2fa') }}</h2>
+                    <p>{{ __('prof_2fa_desc') }}</p>
                 </div>
                 @if (request()->user()->two_factor_confirmed_at)
-                    <x-status-badge status="Enabled" type="success" />
+                    <x-status-badge :status="__('prof_enabled')" type="success" />
                 @elseif (session('status') !== 'two-factor-authentication-enabled')
                     <form action="/user/two-factor-authentication" method="POST">
                         @csrf
-                        <x-forms.button type="submit">Configure 2FA</x-forms.button>
+                        <x-forms.button type="submit">{{ __('prof_configure_2fa') }}</x-forms.button>
                     </form>
                 @endif
             </div>
@@ -251,14 +250,14 @@
                 @if (session('status') === 'two-factor-authentication-enabled')
                     <div class="grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]">
                         <div
-                            class="flex aspect-square items-center justify-center rounded-[10px] border border-neutral-200 bg-white p-5 dark:border-white/[0.07]">
+                            class="flex aspect-square items-center justify-center rounded-[10px] border border-neutral-200 bg-white p-5 dark:border-white/[0.07] dark:bg-white/[0.06]">
                             {!! request()->user()->twoFactorQrCodeSvg() !!}
                         </div>
                         <div class="space-y-4">
                             <div>
-                                <h3 class="text-sm font-semibold text-black dark:text-fg">Finish setup</h3>
+                                <h3 class="text-sm font-semibold text-black dark:text-fg">{{ __('prof_finish_setup') }}</h3>
                                 <p class="mt-1 text-sm text-neutral-500 dark:text-fg-dim">
-                                    Scan the QR code, then enter the current code from your authenticator.
+                                    {{ __('prof_finish_setup_desc') }}
                                 </p>
                             </div>
                             <form action="/user/confirmed-two-factor-authentication" method="POST"
@@ -266,8 +265,8 @@
                                 x-init="$nextTick(() => $el.querySelector('input[name=code]')?.focus())">
                                 @csrf
                                 <x-forms.input name="code" type="text" inputmode="numeric" pattern="[0-9]*" id="code"
-                                    label="One-time code" required />
-                                <x-forms.button type="submit">Validate 2FA</x-forms.button>
+                                    :label="__('prof_one_time_code')" required />
+                                <x-forms.button type="submit">{{ __('prof_validate_2fa') }}</x-forms.button>
                             </form>
                             <div x-data="{ showCode: false }">
                                 <div x-cloak x-show="showCode" class="space-y-2 pb-3">
@@ -276,7 +275,7 @@
                                     <x-forms.copy-input :text="request()->user()->twoFactorQrCodeUrl()" />
                                 </div>
                                 <x-forms.button type="button" x-on:click="showCode = !showCode">
-                                    <span x-text="showCode ? 'Hide manual setup' : 'Show manual setup'"></span>
+                                    <span x-text="showCode ? '{{ __("prof_hide_manual") }}' : '{{ __("prof_show_manual") }}'"></span>
                                 </x-forms.button>
                             </div>
                         </div>
@@ -286,12 +285,12 @@
                         <div class="flex flex-wrap items-center justify-end gap-2">
                             <form action="/user/two-factor-recovery-codes" method="POST">
                                 @csrf
-                                <x-forms.button type="submit">Regenerate recovery codes</x-forms.button>
+                                <x-forms.button type="submit">{{ __('prof_regenerate_codes') }}</x-forms.button>
                             </form>
                             <form action="/user/two-factor-authentication" method="POST">
                                 @csrf
                                 @method('DELETE')
-                                <x-forms.button type="submit" isError>Disable 2FA</x-forms.button>
+                                <x-forms.button type="submit" isError>{{ __('prof_disable_2fa') }}</x-forms.button>
                             </form>
                         </div>
                         @if (session('status') === 'two-factor-authentication-confirmed'
@@ -305,8 +304,8 @@
                         @endif
                     </div>
                 @else
-                    <x-empty size="sm" title="Two-factor authentication is off"
-                        description="Configure an authenticator app to add another sign-in check."
+                    <x-empty size="sm" :title="__('prof_2fa_off')"
+                        :description="__('prof_2fa_off_desc')"
                         icon-name="keys" />
                 @endif
             </div>
@@ -315,41 +314,41 @@
         <section class="application-settings-section">
             <div class="application-settings-section-header">
                 <div>
-                    <h2>Danger zone</h2>
-                    <p>Destructive actions for your account cannot be undone.</p>
+                    <h2>{{ __('prof_danger_zone') }}</h2>
+                    <p>{{ __('prof_danger_zone_desc') }}</p>
                 </div>
             </div>
             <div class="application-settings-section-body">
-                <x-danger-zone title="Delete account">
+                <x-danger-zone :title="__('prof_delete_account')">
                     @if ($accountDeletionBlockers === [])
                         <p>
-                            Permanently delete your account from Coolify. This action cannot be undone.
+                            {{ __('prof_delete_account_desc') }}
                         </p>
                         <ul class="space-y-1 text-xs">
-                            <li>• Teams where you are the only member are deleted.</li>
-                            <li>• You are removed from all other teams.</li>
-                            <li>• Your API tokens and sessions are revoked.</li>
+                            <li>{{ __('prof_delete_li1') }}</li>
+                            <li>{{ __('prof_delete_li2') }}</li>
+                            <li>{{ __('prof_delete_li3') }}</li>
                         </ul>
                     @else
-                        <p>Before you can delete your account:</p>
+                        <p>{{ __('prof_delete_blocked') }}</p>
                         <ul class="space-y-1">
                             @foreach ($accountDeletionBlockers as $blocker)
-                                <li>• {{ $blocker }}</li>
+                                <li>{{ $blocker }}</li>
                             @endforeach
                         </ul>
                     @endif
                     <x-slot:action>
                         @if ($accountDeletionBlockers === [])
-                            <x-modal-confirmation title="Confirm Account Deletion?" buttonTitle="Delete account"
+                            <x-modal-confirmation :title="__('prof_confirm_delete')" :buttonTitle="__('prof_delete_account')"
                                 isErrorButton submitAction="deleteAccount"
                                 :actions="$accountDeletionActions"
                                 confirmationText="{{ $email }}"
-                                confirmationLabel="Enter your email address to confirm permanent deletion"
-                                shortConfirmationLabel="Email" step3ButtonText="Permanently Delete" />
+                                :confirmationLabel="__('prof_confirm_delete_label')"
+                                :shortConfirmationLabel="__('prof_email_short')" :step3ButtonText="__('prof_permanently_delete')" />
                         @else
                             <x-forms.button isError disabled
-                                tooltip="Resolve the requirements shown before deleting your account.">
-                                Delete account
+                                :tooltip="__('prof_delete_tooltip')">
+                                {{ __('prof_delete_account') }}
                             </x-forms.button>
                         @endif
                     </x-slot:action>
@@ -358,8 +357,8 @@
         </section>
 
         @if (session()->has('errors'))
-            <x-callout type="danger" title="Profile update failed">
-                Something went wrong. Please review the fields and try again.
+            <x-callout type="danger" :title="__('prof_update_failed')">
+                {{ __('prof_update_failed_desc') }}
             </x-callout>
         @endif
     </div>

@@ -1,14 +1,14 @@
 <div>
     <x-slot:title>
-        {{ data_get_str($environment, 'name')->limit(10) }} > {{ __('project.resources') }} | Coolify
+        {{ data_get_str($environment, 'name')->limit(10) }} > {{ __('project.resources') }} | ABao
     </x-slot>
     <div x-data="resourceIndex()" class="w-full">
         <header class="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div class="min-w-0">
                 <h1 class="truncate text-[24px]! leading-7! font-semibold! tracking-tight!">{{ $environment->name }}</h1>
                 <p class="mt-1 text-[13px] text-neutral-500 dark:text-fg-dim">
-                    <span x-text="`${resources.length} ${resources.length === 1 ? 'resource' : 'resources'}`"></span>
-                    in {{ $project->name }}
+                    {{ __('project.in_prefix', ['project' => $project->name]) }}
+                    <span x-text="`${resources.length} ${resources.length === 1 ? '{{ __('project.unit_resource') }}' : '{{ __('project.unit_resources') }}'}`"></span>
                 </p>
             </div>
             <div class="flex w-fit shrink-0 items-center gap-2">

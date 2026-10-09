@@ -14,19 +14,19 @@
     $maxRequests = max(1, (int) collect($paths)->max('requests'));
 @endphp
 @if (collect($paths)->isEmpty())
-    <x-empty size="sm" title="No path data" description="No requests were recorded for the selected range."
+    <x-empty size="sm" title="{{ __('anl_no_path_data') }}" description="{{ __('anl_no_path_data_desc') }}"
         icon-name="unordered-list" />
 @else
     <div x-data="{ page: 0, per: 10, total: {{ count($paths) }} }">
         <div class="flex items-center gap-3 border-b border-neutral-200 px-4 py-2 text-[11px] font-medium text-neutral-500 dark:border-white/[0.07] dark:text-fg-dim">
-            <span class="min-w-0 flex-1">Path</span>
-            <span class="hidden w-16 shrink-0 text-right sm:inline" title="Request volume relative to the busiest row in this list">Volume</span>
-            <span class="w-16 shrink-0 text-right">Requests</span>
-            <span class="hidden w-14 shrink-0 text-right sm:inline" title="HTTP 4xx client-error responses">4xx errors</span>
-            <span class="w-14 shrink-0 text-right" title="HTTP 5xx server-error responses">5xx errors</span>
-            <span class="hidden w-12 shrink-0 text-right lg:inline" title="Percentage of requests with a 4xx or 5xx response">Error %</span>
-            <span class="hidden w-16 shrink-0 text-right sm:inline" title="Total response data sent">Bandwidth</span>
-            <span class="hidden w-16 shrink-0 text-right md:inline" title="95% of requests completed within this response time">p95 latency</span>
+            <span class="min-w-0 flex-1">{{ __('anl_path_col') }}</span>
+            <span class="hidden w-16 shrink-0 text-right sm:inline" title="{{ __('anl_volume_tip') }}">{{ __('anl_volume_col') }}</span>
+            <span class="w-16 shrink-0 text-right">{{ __('anl_requests_col') }}</span>
+            <span class="hidden w-14 shrink-0 text-right sm:inline" title="{{ __('anl_4xx_tip') }}">{{ __('anl_4xx_col') }}</span>
+            <span class="w-14 shrink-0 text-right" title="{{ __('anl_5xx_tip') }}">{{ __('anl_5xx_col') }}</span>
+            <span class="hidden w-12 shrink-0 text-right lg:inline" title="{{ __('anl_error_pct_tip') }}">{{ __('anl_error_pct_col') }}</span>
+            <span class="hidden w-16 shrink-0 text-right sm:inline" title="{{ __('anl_bandwidth_tip') }}">{{ __('anl_bandwidth_col') }}</span>
+            <span class="hidden w-16 shrink-0 text-right md:inline" title="{{ __('anl_p95_tip_col') }}">{{ __('anl_p95_latency_col') }}</span>
         </div>
         @foreach ($paths as $path)
             @php
@@ -52,16 +52,16 @@
                     <div class="h-full rounded-full bg-[var(--chart-status-3xx)]" style="width: {{ $width }}%;"></div>
                 </div>
                 <span class="w-16 shrink-0 text-right text-[12px] font-medium tabular-nums text-black dark:text-fg"
-                    title="{{ number_format($requests) }} requests">{{ compactNumber($requests) }}</span>
+                    title="{{ __('anl_requests_count', ['count' => number_format($requests)]) }}">{{ compactNumber($requests) }}</span>
                 <span class="hidden w-14 shrink-0 text-right text-[11px] font-medium tabular-nums text-pink-600 sm:inline dark:text-pink-400"
-                    title="{{ number_format($s4xx) }} client-error responses">{{ compactNumber($s4xx) }} 4xx</span>
+                    title="{{ __('anl_4xx_count_tip', ['count' => number_format($s4xx)]) }}">{{ compactNumber($s4xx) }} 4xx</span>
                 <span class="w-14 shrink-0 text-right text-[11px] font-medium tabular-nums text-purple-600 dark:text-purple-400"
-                    title="{{ number_format($s5xx) }} server-error responses">{{ compactNumber($s5xx) }} 5xx</span>
+                    title="{{ __('anl_5xx_count_tip', ['count' => number_format($s5xx)]) }}">{{ compactNumber($s5xx) }} 5xx</span>
                 <span class="hidden w-12 shrink-0 text-right text-[11px] tabular-nums text-neutral-400 lg:inline dark:text-fg-faint"
-                    title="Combined 4xx and 5xx response rate">{{ $errorRate }}%</span>
+                    title="{{ __('anl_error_rate_tip') }}">{{ $errorRate }}%</span>
                 <span class="hidden w-16 shrink-0 text-right text-[11px] tabular-nums text-neutral-400 sm:inline dark:text-fg-faint">{{ formatBytes((int) ($path['bytesOut'] ?? 0)) }}</span>
                 <span class="hidden w-16 shrink-0 text-right text-[11px] tabular-nums text-neutral-400 md:inline dark:text-fg-faint"
-                    title="p95 latency">{{ number_format((float) ($path['p95'] ?? 0), 1) }} ms</span>
+                    title="{{ __('anl_p95_row_tip') }}">{{ number_format((float) ($path['p95'] ?? 0), 1) }} ms</span>
             </div>
         @endforeach
         @include('livewire.traffic._pager')

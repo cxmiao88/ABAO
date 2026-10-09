@@ -56,11 +56,11 @@
     @if (isSubscribed() || ! isCloud())
         <div class="px-1 pb-3" :class="collapsed && 'lg:px-0'">
             <button @click="$dispatch('open-global-search')" type="button"
-                :title="'Search (Press / or ' + modKeyLabel + 'K)'"
+                :title="'{{ __('nav.search') }} (' + modKeyLabel + 'K)'"
                 class="menu-item justify-between !bg-neutral-100 dark:!bg-white/[0.04] hover:!bg-neutral-200 dark:hover:!bg-white/[0.07] !text-fg-faint">
                 <span class="flex items-center gap-2.5 min-w-0">
                     <x-reicon name="search" class="menu-item-icon" />
-                    <span class="menu-item-label" :class="collapsed && 'lg:hidden'">Search</span>
+                    <span class="menu-item-label" :class="collapsed && 'lg:hidden'">{{ __('nav.search') }}</span>
                 </span>
                 <kbd class="px-1.5 py-0.5 text-[11px] font-medium text-fg-faint bg-neutral-200 dark:bg-white/[0.06] rounded-md border border-transparent dark:border-white/5"
                     :class="collapsed && 'lg:hidden'" x-text="modKeyLabel + 'K'"></kbd>

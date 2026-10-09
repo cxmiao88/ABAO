@@ -1,6 +1,6 @@
 <div>
     <x-slot:title>
-        {{ data_get_str($server, 'name')->limit(10) }} > CA Certificate | Coolify
+        {{ data_get_str($server, 'name')->limit(10) }} > {{ __('sec_ca_title') }} | ABao
     </x-slot>
 
     <livewire:server.navbar :server="$server" />
@@ -10,76 +10,75 @@
         <x-server.sidebar :server="$server" activeMenu="ca-certificate" />
 
         <div class="application-settings-form flex w-full flex-col gap-6">
-            <x-application.settings-section id="server-ca-overview-section" title="CA certificate"
-                helper="Manage the certificate authority used to sign database certificates on this server.">
+            <x-application.settings-section id="server-ca-overview-section" title="{{ __('sec_ca_section') }}"
+                helper="{{ __('sec_ca_helper') }}">
                 <x-slot:actions>
                     @if ($certificateValidUntil)
                         <x-status-badge
                             :status="now()->gt($certificateValidUntil)
-                                ? 'Expired'
-                                : (now()->addDays(30)->gt($certificateValidUntil) ? 'Expiring soon' : 'Valid')"
+                                ? __('sec_expired')
+                                : (now()->addDays(30)->gt($certificateValidUntil) ? __('sec_ca_status_expiring') : __('sec_ca_status_valid'))"
                             :type="now()->gt($certificateValidUntil) || now()->addDays(30)->gt($certificateValidUntil)
                                 ? 'error'
                                 : 'success'" />
                     @endif
                 </x-slot:actions>
 
-                <x-callout type="info" title="Using this certificate">
-                    Mount the CA certificate into containers that connect to databases over SSL. Re-deploy affected
-                    databases and resources after replacing or regenerating it.
+                <x-callout type="info" title="{{ __('sec_ca_using') }}">
+                    {{ __('sec_ca_using_desc') }}
                     <a class="font-medium underline" href="https://coolify.io/docs/databases/ssl" target="_blank">
-                        Read the SSL guide.
+                        {{ __('sec_ca_read_ssl_guide') }}
                     </a>
                 </x-callout>
 
                 <div class="mt-4">
-                    <p class="mb-1.5 text-xs font-medium text-neutral-500 dark:text-fg-dim">Read-only bind mount</p>
+                    <p class="mb-1.5 text-xs font-medium text-neutral-500 dark:text-fg-dim">{{ __('sec_ca_bind_mount') }}</p>
                     <x-forms.copy-input
                         text="- /data/coolify/ssl/coolify-ca.crt:/etc/ssl/certs/coolify-ca.crt:ro" />
                 </div>
             </x-application.settings-section>
 
-            <x-application.settings-section id="server-ca-content-section" title="Certificate content"
-                helper="Review or replace the PEM certificate stored on this server.">
+            <x-application.settings-section id="server-ca-content-section" title="{{ __('sec_ca_content') }}"
+                helper="{{ __('sec_ca_content_helper') }}">
                 <x-slot:actions>
                     <div class="flex items-center gap-2">
                         @can('view', $server)
                             <x-forms.button wire:click="toggleCertificate" type="button">
-                                {{ $showCertificate ? 'Hide certificate' : 'Show certificate' }}
+                                {{ $showCertificate ? __('sec_ca_hide') : __('sec_ca_show') }}
                             </x-forms.button>
                         @endcan
                         @can('update', $server)
-                            <x-modal-confirmation title="Confirm changing of CA Certificate?"
-                                buttonTitle="Save certificate" submitAction="saveCaCertificate" :actions="[
-                                    'This overwrites /data/coolify/ssl/coolify-ca.crt with your custom certificate.',
-                                    'Database certificates on this server will be regenerated and signed with the custom CA.',
-                                    'You must redeploy affected databases and resources.',
+                            <x-modal-confirmation title="{{ __('sec_ca_confirm_change') }}"
+                                buttonTitle="{{ __('sec_ca_save') }}" submitAction="saveCaCertificate" :actions="[
+                                    __('sec_ca_save_action1'),
+                                    __('sec_ca_save_action2'),
+                                    __('sec_ca_redeploy'),
                                 ]" confirmationText="/data/coolify/ssl/coolify-ca.crt"
-                                shortConfirmationLabel="CA Certificate Path"
-                                step3ButtonText="Save Certificate" />
-                            <x-modal-confirmation title="Confirm Regenerate Certificate?"
-                                buttonTitle="Regenerate" submitAction="regenerateCaCertificate" :actions="[
-                                    'This replaces the current CA certificate with a newly generated certificate.',
-                                    'Database certificates on this server will be regenerated and signed with the new CA.',
-                                    'You must redeploy affected databases and resources.',
+                                shortConfirmationLabel="{{ __('sec_ca_path_label') }}"
+                                step3ButtonText="{{ __('sec_ca_save') }}" />
+                            <x-modal-confirmation title="{{ __('sec_ca_confirm_regenerate') }}"
+                                buttonTitle="{{ __('sec_ca_regenerate') }}" submitAction="regenerateCaCertificate" :actions="[
+                                    __('sec_ca_regenerate_action1'),
+                                    __('sec_ca_regenerate_action2'),
+                                    __('sec_ca_redeploy'),
                                 ]" confirmationText="/data/coolify/ssl/coolify-ca.crt"
-                                shortConfirmationLabel="CA Certificate Path"
-                                step3ButtonText="Regenerate Certificate" />
+                                shortConfirmationLabel="{{ __('sec_ca_path_label') }}"
+                                step3ButtonText="{{ __('sec_ca_regenerate_btn') }}" />
                         @endcan
                     </div>
                 </x-slot:actions>
 
                 @if ($showCertificate)
                     <x-forms.textarea canGate="update" :canResource="$server" id="certificateContent"
-                        rows="15" label="PEM certificate"
-                        placeholder="Paste or edit CA certificate content here…" />
+                        rows="15" label="{{ __('sec_ca_pem_label') }}"
+                        placeholder="{{ __('sec_ca_pem_placeholder') }}" />
                 @else
                     <div
                         class="flex min-h-72 flex-col items-center justify-center rounded-lg bg-neutral-100/70 px-6 text-center ring-1 ring-neutral-200 dark:bg-black/20 dark:ring-white/[0.08]">
                         <x-reicon name="keys" class="size-8 text-neutral-300 dark:text-fg-faint" />
-                        <p class="mt-3 text-sm font-medium text-neutral-950 dark:text-fg">Certificate hidden</p>
+                        <p class="mt-3 text-sm font-medium text-neutral-950 dark:text-fg">{{ __('sec_ca_hidden') }}</p>
                         <p class="mt-1 text-xs text-neutral-500 dark:text-fg-dim">
-                            Show the certificate to review or edit its contents.
+                            {{ __('sec_ca_hidden_desc') }}
                         </p>
                     </div>
                 @endif

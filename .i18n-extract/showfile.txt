@@ -1,0 +1,13 @@
+-rwxrwxrwx    1 root     root         26439 Oct  7 20:11 /var/www/html/resources/views/livewire/server/show.blade.php
+---
+<div x-data
+    x-init="@if ($server->hetzner_server_id && $server->cloudProviderToken && !$hetznerServerStatus) $wire.checkHetznerServerStatus(); @endif @if ($server->vultr_instance_id && $server->cloudProviderToken) $wire.checkVultrInstanceStatus(); @endif @if ($server->digitalocean_droplet_id && $server->cloudProviderToken && !$digitalOceanDropletStatus) $wire.checkDigitalOceanDropletStatus(); @endif">
+    <x-slot:title>
+---
+2
+---
+66:                    <x-application.settings-section id="server-connection-section" data-marker="MARKER-CONNECTION-77" :title="__('server.connection_title')"
+246:                    </x-application.settings-section>
+249:                    <x-application.settings-section id="server-overview-section" data-marker="MARKER-OVERVIEW-88" :title="__('server.overview_title')"
+336:                    </x-application.settings-section>
+339:                        <x-application.settings-section :title="__('server.previous_validation_title')"

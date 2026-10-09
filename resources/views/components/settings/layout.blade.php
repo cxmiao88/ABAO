@@ -1,26 +1,26 @@
 @php
     $settingsMenuSections = [
-        'Configuration' => [
-            ['label' => 'General', 'route' => 'settings.index', 'icon' => 'settings'],
-            ['label' => 'Advanced', 'route' => 'settings.advanced', 'icon' => 'grid'],
-            ['label' => 'Updates', 'route' => 'settings.updates', 'icon' => 'refresh3'],
+        __('set_menu_configuration') => [
+            ['label' => __('set_menu_general'), 'route' => 'settings.index', 'icon' => 'settings'],
+            ['label' => __('set_menu_advanced'), 'route' => 'settings.advanced', 'icon' => 'grid'],
+            ['label' => __('set_menu_updates'), 'route' => 'settings.updates', 'icon' => 'refresh3'],
         ],
-        'Instance' => [
-            ['label' => 'Backup', 'route' => 'settings.backup', 'icon' => 'database'],
-            ['label' => 'Email', 'route' => 'settings.email', 'icon' => 'mail'],
-            ['label' => 'Authentication', 'route' => 'settings.oauth', 'icon' => 'keys'],
+        __('set_menu_instance') => [
+            ['label' => __('set_menu_backup'), 'route' => 'settings.backup', 'icon' => 'database'],
+            ['label' => __('set_menu_email'), 'route' => 'settings.email', 'icon' => 'mail'],
+            ['label' => __('set_menu_authentication'), 'route' => 'settings.oauth', 'icon' => 'keys'],
         ],
     ];
 @endphp
 
 <section class="application-settings-workspace w-full max-w-none">
     <header class="settings-mobile-header xl:hidden">
-        <h1 class="settings-mobile-title">Instance Settings</h1>
-        <p class="settings-mobile-description">Configure global settings for this Coolify instance.</p>
+        <h1 class="settings-mobile-title">{{ __('set_menu_instance_settings') }}</h1>
+        <p class="settings-mobile-description">{{ __('set_menu_instance_settings_desc') }}</p>
     </header>
     <div class="grid min-w-0 gap-8 xl:grid-cols-[210px_minmax(0,1fr)] xl:gap-8">
         <aside class="application-settings-navigation min-w-0 xl:self-start">
-            <nav aria-label="Instance settings"
+            <nav aria-label="{{ __('set_menu_instance_settings_aria') }}"
                 class="grid grid-cols-2 gap-0.5 border-y border-neutral-200 py-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-1 xl:border-y-0 xl:py-0 dark:border-white/[0.06]">
                 @foreach ($settingsMenuSections as $section => $menuItems)
                     <div @class([

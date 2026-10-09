@@ -35,8 +35,8 @@
         <x-slot:actions>
             <x-forms.button type="button" wire:click="switch" class="whitespace-nowrap">
                 <x-reicon :name="$view === 'normal' ? 'browser-code' : 'unordered-list'" class="size-3.5" />
-                <span class="max-sm:hidden">{{ $view === 'normal' ? 'Developer view' : 'Normal view' }}</span>
-                <span class="sm:hidden">{{ $view === 'normal' ? 'Developer' : 'Normal' }}</span>
+                <span class="max-sm:hidden">{{ $view === 'normal' ? __('sv.developer_view') : __('sv.normal_view') }}</span>
+                <span class="sm:hidden">{{ $view === 'normal' ? __('sv.developer') : __('sv.normal') }}</span>
             </x-forms.button>
         </x-slot:actions>
         @if ($view === 'normal')
@@ -45,11 +45,11 @@
                 <div class="relative w-full sm:max-w-sm">
                     <x-reicon name="search"
                         class="pointer-events-none absolute top-1/2 left-2.5 z-10 size-3.5 -translate-y-1/2 text-neutral-400 dark:text-fg-faint" />
-                    <input x-model.debounce.150ms="sharedSearch" type="search" placeholder="Search variables"
+                    <input x-model.debounce.150ms="sharedSearch" type="search" placeholder="{{ __('sv.search_variables') }}"
                         class="h-8! w-full rounded-lg! border-neutral-200! bg-white! py-0! pr-8! pl-8! text-[12px]! shadow-none! placeholder:text-neutral-400 focus:border-accent! focus:ring-0! dark:border-white/[0.08]! dark:bg-white/[0.035]! dark:text-fg! dark:placeholder:text-fg-faint">
                     <button x-cloak x-show="sharedSearch" @click="sharedSearch = ''" type="button"
                         class="absolute top-1/2 right-2 flex size-5 -translate-y-1/2 items-center justify-center rounded text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-black dark:text-fg-faint dark:hover:bg-white/[0.07] dark:hover:text-fg"
-                        aria-label="Clear search">
+                        aria-label="{{ __('sv.clear_search') }}">
                         <x-reicon name="x" class="size-3" />
                     </button>
                 </div>
@@ -58,11 +58,11 @@
                     <x-table.dropdown panel-class="w-48!">
                         <x-slot:trigger><button type="button" class="button" aria-haspopup="listbox" :aria-expanded="open">
                             <x-reicon name="sort-direction" class="size-3.5" />
-                            Sort
+                            {{ __('sv.sort') }}
                         </button></x-slot:trigger>
                             <button type="button" class="listbox-option"
                                 @click="sharedSort = 'alphabetical'; close()">
-                                <span>Alphabetical</span>
+                                <span>{{ __('sv.alphabetical') }}</span>
                                 <svg x-show="sharedSort === 'alphabetical'" class="size-3.5 shrink-0" viewBox="0 0 24 24"
                                     fill="none">
                                     <path d="M5 12l5 5 9-11" stroke="currentColor" stroke-width="2"
@@ -71,7 +71,7 @@
                             </button>
                             <button type="button" class="listbox-option"
                                 @click="sharedSort = 'creation'; close()">
-                                <span>Creation order</span>
+                                <span>{{ __('sv.creation_order') }}</span>
                                 <svg x-show="sharedSort === 'creation'" class="size-3.5 shrink-0" viewBox="0 0 24 24"
                                     fill="none">
                                     <path d="M5 12l5 5 9-11" stroke="currentColor" stroke-width="2"
@@ -81,12 +81,12 @@
                     </x-table.dropdown>
 
                     @can('update', $resource)
-                        <x-modal-input title="New Shared Variable">
+                        <x-modal-input title="{{ __('sv.new_shared_variable') }}">
                             <x-slot:content>
                                 <button type="button"
                                     class="button button-highlighted">
                                     <x-reicon name="plus" class="size-3.5" />
-                                    Add variable
+                                    {{ __('sv.add_variable') }}
                                 </button>
                             </x-slot:content>
                             <livewire:project.shared.environment-variable.add :shared="true" />
@@ -97,17 +97,17 @@
 
             @if ($variables->isEmpty())
                 <div class="p-3">
-                    <x-empty title="No shared variables"
-                        description="Add a variable to make it available to resources in this scope."
+                    <x-empty title="{{ __('sv.no_shared_variables') }}"
+                        description="{{ __('sv.no_shared_variables_helper') }}"
                         icon-name="variables" size="sm" />
                 </div>
             @else
                 <div class="data-table flex w-full flex-col">
                     <div class="data-table-header env-table-grid-shared order-[-1]">
-                        <span>Name</span>
-                        <span>Scope</span>
-                        <span>{{ count($readOnlyKeys) ? 'Value / comment' : 'Comment' }}</span>
-                        <span class="text-center">Multiline</span>
+                        <span>{{ __('sv.name') }}</span>
+                        <span>{{ __('sv.scope') }}</span>
+                        <span>{{ count($readOnlyKeys) ? __('sv.value_comment') : __('sv.comment') }}</span>
+                        <span class="text-center">{{ __('sv.multiline') }}</span>
                         <span></span>
                     </div>
                     @foreach ($variables as $env)
@@ -118,12 +118,12 @@
                                 <div class="data-table-row env-table-grid-shared">
                                     <div class="min-w-0">
                                         <div class="env-key-label truncate font-mono text-[13px]" title="{{ $env->key }}">{{ $env->key }}</div>
-                                        <div class="text-[11px] text-neutral-500 dark:text-fg-dim">Built-in · Read-only</div>
+                                        <div class="text-[11px] text-neutral-500 dark:text-fg-dim">{{ __('sv.builtin_readonly') }}</div>
                                     </div>
                                     <span class="env-type-desktop text-[13px] text-neutral-500 dark:text-fg-dim">{{ str($type)->headline() }}</span>
                                     <span class="min-w-0 truncate font-mono text-[13px]" title="{{ $env->value }}">{{ $env->value }}</span>
                                     <span class="data-table-cell-dash">-</span>
-                                    <span class="justify-self-end text-neutral-400 dark:text-fg-faint" title="Built-in variable, managed by Coolify"><x-reicon name="keys" class="size-3.5" /></span>
+                                    <span class="justify-self-end text-neutral-400 dark:text-fg-faint" title="{{ __('sv.builtin_managed') }}"><x-reicon name="keys" class="size-3.5" /></span>
                                 </div>
                             </div>
                         @else
@@ -135,14 +135,14 @@
                     @endforeach
                     <div
                         class="order-[9999] flex min-h-11 items-center border-t border-neutral-200 px-4 text-[11px] text-neutral-500 dark:border-white/[0.08] dark:text-fg-faint">
-                        <span x-text="`${filteredCount} ${filteredCount === 1 ? 'variable' : 'variables'}`"></span>
+                        <span x-text="`${filteredCount} {{ __('sv.variables_count') }}`"></span>
                     </div>
                 </div>
             @endif
         @else
             @if ($variables->whereIn('key', $readOnlyKeys)->isNotEmpty())
                 <div class="border-b border-neutral-200 p-4 dark:border-white/[0.08]">
-                    <div class="mb-2 text-[12px] text-neutral-500 dark:text-fg-dim">Built-in · Read-only</div>
+                    <div class="mb-2 text-[12px] text-neutral-500 dark:text-fg-dim">{{ __('sv.builtin_readonly') }}</div>
                     @foreach ($variables->whereIn('key', $readOnlyKeys)->sortBy('key') as $env)
                         <div class="break-all font-mono text-[13px]">{{ $env->key }}={{ $env->value }}</div>
                     @endforeach

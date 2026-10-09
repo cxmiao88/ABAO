@@ -109,18 +109,18 @@ class AdminView extends Component
     private function deletionError(User $actor, User $target): ?string
     {
         if ($target->id === 0) {
-            return 'The root user cannot be deleted.';
+            return __('user.blocker_root');
         }
 
         if ($target->id === $actor->id) {
-            return 'Delete your own account from your profile.';
+            return __('user.delete_own_profile');
         }
 
         $actorRole = $this->rootTeamRole($actor);
         $targetRole = $this->rootTeamRole($target);
 
         if (! $actorRole || ($targetRole && $targetRole->gt($actorRole))) {
-            return 'You cannot delete a user with a higher role in the root team.';
+            return __('user.delete_higher_role');
         }
 
         return null;

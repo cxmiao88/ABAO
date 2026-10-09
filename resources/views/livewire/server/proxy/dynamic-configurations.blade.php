@@ -1,6 +1,6 @@
 <div>
     <x-slot:title>
-        {{ __('server.pxdc_title') }} | Coolify
+        {{ __('server.pxdc_title') }} | ABao
     </x-slot>
 
     <livewire:server.navbar :server="$server" />

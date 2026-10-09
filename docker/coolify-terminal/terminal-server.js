@@ -111,12 +111,20 @@ const server = http.createServer((req, res) => {
 
 const getSessionCookie = (req) => {
     const cookies = parseCookie(req.headers.cookie || '');
-    const xsrfToken = cookies['XSRF-TOKEN'];
+    // Cookie 值经 urlencode（%3D 等），Laravel 校验 X-XSRF-TOKEN 时需要解密，
+    // 先解码还原加密串（ABao 二开修复：原生此处未解码导致 419）。
+    const rawXsrf = cookies['XSRF-TOKEN'];
+    let xsrfToken = rawXsrf;
+    try {
+        xsrfToken = decodeURIComponent(rawXsrf || '');
+    } catch (_) {
+        xsrfToken = rawXsrf || '';
+    }
     const appName = process.env.APP_NAME || 'laravel';
     const sessionCookieName = `${appName.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase()}_session`;
     return {
         sessionCookieName,
-        xsrfToken: xsrfToken,
+        xsrfToken,
         laravelSession: cookies[sessionCookieName]
     }
 }

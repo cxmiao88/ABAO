@@ -42,7 +42,7 @@ class ServerRegistries extends Component
 
         $loggedIn = [];
         if (! $this->server->isFunctional()) {
-            $this->error = 'The server is not reachable. Validate the server to read its registry logins.';
+            $this->error = __('server.reg_error_not_reachable');
         } else {
             try {
                 $loggedIn = DockerRegistryLogins::forServer($this->server);
@@ -100,17 +100,13 @@ class ServerRegistries extends Component
         }
 
         DockerRegistryLogins::audit($this->server, 'logout', $registry);
-        $this->dispatch('success', "Deleted the login for {$registry}.");
+        $this->dispatch('success', __('server.reg_deleted', ['registry' => $registry]));
         $this->loadRegistries();
     }
 
     public function placeholder(): string
     {
-        return <<<'HTML'
-        <div class="rounded-xl border border-neutral-200 bg-white p-4 text-[12px] text-neutral-500 shadow-sm dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-fg-faint">
-            Loading registries...
-        </div>
-        HTML;
+        return '<div class="rounded-xl border border-neutral-200 bg-white p-4 text-[12px] text-neutral-500 shadow-sm dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-fg-faint">'.__('server.reg_loading').'</div>';
     }
 
     public function render()
