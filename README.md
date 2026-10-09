@@ -39,12 +39,22 @@
 在一台 **2 核 2G 及以上**的 Linux 服务器（Ubuntu/Debian/CentOS 等）上执行：
 
 ```bash
+国内服务器（推荐，jsdelivr CDN）：
+
+```bash
+curl -fsSL https://cdn.jsdelivr.net/gh/cxmiao88/ABAO@main/install.sh | bash
+```
+
+海外服务器（GitHub 直连）：
+
+```bash
 curl -fsSL https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash
+```
 ```
 
 脚本会全自动完成：环境检测 → Docker 安装 → 拉取 ABao 源码 → 生成安全配置 → 启动 Coolify 后端 → 部署 mdserver-web → 安装前端面板 → 输出访问地址与初始账号。
 
-> 安装过程仅需你输入一次面板管理员密码，其余全部自动化，无需再手动操作。
+> 全程全自动、无交互（`curl | bash` 管道模式亦可）：管理员账号与所有密钥自动随机生成，安装结束一次性显示并存档于服务器本地。也可用环境变量 `ABAO_ADMIN_EMAIL` / `ABAO_ADMIN_PASSWORD` 自定义管理员账号。
 
 ### 手动部署（开发模式）
 
@@ -86,8 +96,8 @@ docker compose -f docker-compose.prod.yml up -d
 
 ## 账号与安全
 
-- 安装脚本采用**零凭据**设计：仓库内不包含任何默认密码，安装时由你交互设置
-- 面板管理员账号、数据库密码均随机生成并只在安装结束界面展示一次，请立即保存
+- 安装脚本采用**零凭据**设计：仓库内不包含任何默认密码，安装时全自动随机生成
+- 面板管理员账号、数据库密码均随机生成，安装结束界面展示一次并存档于服务器本地 `.abao-credentials`（权限 600），请立即保存
 - 支持后续通过面板「设置」修改密码、绑定安全入口
 
 ## 开发与贡献
