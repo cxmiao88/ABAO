@@ -1,7 +1,0 @@
-version: '3.8'
-services:
-  fix-navbar:
-    image: alpine:latest
-    volumes:
-      - /var/www/html/resources/views/components/navbar.blade.php:/target/navbar.blade.php:ro
-    command: sh -c "sed -i 's/@if (auth()->user()?->isAdmin())/@if (auth()->user()?->isAdmin() \&\& Route::has('\''registries.index'\''))/' /target/navbar.blade.php"
