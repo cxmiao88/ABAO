@@ -233,6 +233,8 @@ EOF
 # ---------- 5. 启动 Coolify ----------
 start_coolify() {
     info "启动 Coolify 容器（Postgres + Redis + 应用）…"
+    # Coolify compose 声明 external 网络 coolify，必须先创建（幂等）
+    docker network create coolify >/dev/null 2>&1 || true
     cd "$ABAO_DIR"
     docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d 2>&1 | tail -8 || die "Coolify 容器启动失败（docker compose up -d）"
     info "等待服务就绪（最多 120 秒）…"
