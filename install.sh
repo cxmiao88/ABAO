@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-#  ABao 阿宝面板 - 一键安装脚本 v2（2026-10-09 重写）
+#  ABao 阿宝面板 - 一键安装脚本 v2.1（2026-10-10 更新）
 #  ---------------------------------------------------------------------------
 #  用法（root 用户执行）：
 #    curl -fsSL https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash
@@ -142,27 +142,28 @@ install_docker() {
     ok "Docker Compose：$(docker compose version --short 2>/dev/null || echo 未知)"
 }
 
-# ---------- 3. 拉取源码（git 失败自动转 zip 下载，含国内加速） ----------
+# ---------- 3. 拉取源码（ZIP 优先，git 仅更新已存在源码；全程进度显示） ----------
 fetch_source() {
     if [ -d "$ABAO_DIR/.git" ]; then
-        info "检测到已有源码，拉取最新…"
-        git -C "$ABAO_DIR" fetch origin "$ABAO_BRANCH" >/dev/null 2>&1 && git -C "$ABAO_DIR" reset --hard "origin/$ABAO_BRANCH" >/dev/null 2>&1 || warn "源码更新失败，使用现有版本"
+        info "检测到已有源码，拉取最新（30 秒超时）…"
+        timeout 30 git -C "$ABAO_DIR" fetch origin "$ABAO_BRANCH" >/dev/null 2>&1 \
+            && timeout 30 git -C "$ABAO_DIR" reset --hard "origin/$ABAO_BRANCH" >/dev/null 2>&1 \
+            || warn "源码更新失败（网络不可达），使用现有版本"
     else
+        local zip="/tmp/abao-main.zip"
         info "下载 ABao 源码到 $ABAO_DIR …"
-        if command -v git >/dev/null 2>&1 && git clone -b "$ABAO_BRANCH" --depth 1 "$ABAO_REPO" "$ABAO_DIR" >/dev/null 2>&1; then
-            ok "源码下载完成（git）"
-        else
-            warn "GitHub git 克隆失败，改用 ZIP 下载…"
-            local zip="/tmp/abao-main.zip"
-            curl -fsSL --max-time 300 "$SRC_ZIP_URL" -o "$zip" \
-                || curl -fsSL --max-time 300 "$SRC_ZIP_GH" -o "$zip" \
-                || die "源码下载失败（网络无法访问 GitHub）。请配置代理或手动下载 https://github.com/cxmiao88/ABAO 后放到 $ABAO_DIR"
-            rm -rf "$ABAO_DIR" /tmp/abao-extract
-            mkdir -p "$ABAO_DIR" /tmp/abao-extract
-            unzip -q "$zip" -d /tmp/abao-extract || die "源码压缩包解压失败"
-            cp -r /tmp/abao-extract/ABAO-main/. "$ABAO_DIR/" 2>/dev/null || cp -r /tmp/abao-extract/*/. "$ABAO_DIR/"
-            ok "源码下载完成（zip）"
+        info "下载源码压缩包（GitHub 直连，30 秒超时）…"
+        if ! curl -fSL --progress-bar --max-time 30 "$SRC_ZIP_URL" -o "$zip" 2>&1; then
+            info "GitHub 直连不可达，切换 ghproxy 加速通道…"
+            curl -fSL --progress-bar --max-time 600 "$SRC_ZIP_GH" -o "$zip" 2>&1 \
+                || die "源码下载失败（GitHub 与加速通道均不可达）。请配置代理，或手动下载后放到 $ABAO_DIR"
         fi
+        ok "源码包下载完成（$(du -h "$zip" | cut -f1)）"
+        rm -rf "$ABAO_DIR" /tmp/abao-extract
+        mkdir -p "$ABAO_DIR" /tmp/abao-extract
+        info "解压源码…"
+        unzip -q "$zip" -d /tmp/abao-extract || die "源码压缩包解压失败"
+        cp -r /tmp/abao-extract/ABAO-main/. "$ABAO_DIR/" 2>/dev/null || cp -r /tmp/abao-extract/*/. "$ABAO_DIR/"
     fi
     [ -f "$ABAO_DIR/docker-compose.prod.yml" ] || die "源码不完整：缺少 docker-compose.prod.yml"
     ok "源码就绪：$ABAO_DIR"
@@ -250,16 +251,20 @@ start_coolify() {
     ok "Coolify 已启动（端口 ${APP_PORT}）"
 }
 
-# ---------- 6. 部署前端面板（Release 资产，含国内加速） ----------
+# ---------- 6. 部署前端面板（Release 资产，进度显示 + 国内加速） ----------
 deploy_frontend() {
-    info "下载 ABao 前端面板…"
     local tmp_zip="/tmp/abao-frontend.zip"
-    curl -fsSL --max-time 300 "$FRONTEND_ZIP_URL" -o "$tmp_zip" \
-        || curl -fsSL --max-time 300 "$FRONTEND_ZIP_GH" -o "$tmp_zip" \
-        || die "前端面板下载失败（GitHub Release 不可达，请配置代理后重试）"
+    info "下载 ABao 前端面板（GitHub Release 直连，30 秒超时）…"
+    if ! curl -fSL --progress-bar --max-time 30 "$FRONTEND_ZIP_URL" -o "$tmp_zip" 2>&1; then
+        info "Release 直连不可达，切换 ghproxy 加速通道…"
+        curl -fSL --progress-bar --max-time 600 "$FRONTEND_ZIP_GH" -o "$tmp_zip" 2>&1 \
+            || die "前端面板下载失败（GitHub Release 与加速通道均不可达，请配置代理后重试）"
+    fi
+    ok "前端包下载完成（$(du -h "$tmp_zip" | cut -f1)）"
     docker exec coolify rm -rf /var/www/html/public/abao
     rm -rf /tmp/abao-frontend && mkdir -p /tmp/abao-frontend
     cd /tmp/abao-frontend
+    info "解压前端包…"
     unzip -q "$tmp_zip" || die "前端压缩包解压失败"
     local src="."
     [ -f index.html ] || src="$(find . -maxdepth 2 -name index.html -printf '%h\n' -quit)"
@@ -277,7 +282,28 @@ patch_nginx() {
     ok "nginx 反代配置已生效（mdserver API → 48700，前端 → /abao/，其余 → SPA）"
 }
 
-# ---------- 8. 防火墙与 SELinux ----------
+# ---------- 8. Docker 镜像加速（腾讯云内网优先 + DaoCloud 公共加速） ----------
+configure_docker_mirror() {
+    local mirrors="https://docker.m.daocloud.io"
+    if curl -s -m 2 http://metadata.tencentyun.com/latest/meta-data/instance-id >/dev/null 2>&1; then
+        mirrors="https://mirror.ccs.tencentyun.com,$mirrors"
+        info "检测到腾讯云环境，优先使用腾讯云内网镜像加速"
+    fi
+    local cfg="/etc/docker/daemon.json"
+    [ -f "$cfg" ] && cp "$cfg" "${cfg}.bak.$(date +%s)" 2>/dev/null || true
+    local mirrors_json
+    mirrors_json="$(printf '%s' "$mirrors" | sed 's/,/","/g')"
+    cat > "$cfg" <<EOF
+{
+  "registry-mirrors": ["${mirrors_json}"]
+}
+EOF
+    systemctl restart docker >/dev/null 2>&1 || true
+    docker info >/dev/null 2>&1 || warn "Docker 重启后异常，请手动检查：systemctl status docker"
+    ok "已配置 Docker 镜像加速（$mirrors）"
+}
+
+# ---------- 9. 防火墙与 SELinux ----------
 open_firewall() {
     if systemctl is-active firewalld >/dev/null 2>&1; then
         firewall-cmd --permanent --add-port="${APP_PORT}/tcp" >/dev/null 2>&1 || true
@@ -335,12 +361,13 @@ print_summary() {
 }
 
 main() {
-    info "========== ABao 阿宝面板一键安装 v2 =========="
+    info "========== ABao 阿宝面板一键安装 v2.1（下载全程进度显示） =========="
     require_root
     detect_os
     check_port "$APP_PORT"
     check_port "$MDSERVER_PORT"
     install_docker
+    configure_docker_mirror
     fetch_source
     gen_env
     start_coolify
