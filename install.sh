@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-#  ABao 阿宝面板 - 一键安装脚本 v2.4.2（2026-10-10 更新：CentOS7 兼容 + 幂等重跑保留 .env + 种子密码强制含数字）
+#  ABao 阿宝面板 - 一键安装脚本 v2.5（2026-10-10 更新：panel-api 二开自动部署 + 停用 firewalld + onboarding 跳过 + PANEL_ADMIN_EMAIL）
 #  ---------------------------------------------------------------------------
 #  用法（root 用户执行）：
 #    curl -fsSL https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash
@@ -256,10 +256,15 @@ ROOT_USERNAME=root
 ROOT_USER_EMAIL=${admin_email}
 ROOT_USER_PASSWORD=${admin_pass}
 
+# ABao 统一登录：panel-api 归属的 Coolify 管理员邮箱（与上方 ROOT_USER_EMAIL 一致）
+PANEL_ADMIN_EMAIL=${admin_email}
+PANEL_MDSERVER_URL=http://host.docker.internal:${MDSERVER_PORT}
+
 REGISTRY_URL=docker.io
 PHP_MEMORY_LIMIT=256M
 EOF
-    chmod 600 "$env_file"
+    # 644：容器内 www-data 需要读取 .env（bind 只读挂载）
+    chmod 644 "$env_file"
     # 凭据存档（仅本地，绝不可提交仓库）
     cat > "$ABAO_DIR/.abao-credentials" <<EOF
 ABao 阿宝面板初始账号（安装于 $(date '+%F %T')，请妥善保存）
@@ -303,6 +308,8 @@ start_coolify() {
     [ "$i" -ge 120 ] && warn "等待超时，请稍后手动检查：docker ps"
     docker exec coolify php artisan migrate --force >/dev/null 2>&1 || warn "migrate 需手动执行（容器尚未完全就绪）"
     docker exec coolify php artisan db:seed --class=RootUserSeeder --force >/dev/null 2>&1 || true
+    # 跳过首次 onboarding（新装用户直接进入面板，与 ABao 统一入口一致）
+    docker exec coolify php artisan tinker --execute '\App\Models\Team::query()->update(["show_boarding" => false]);' >/dev/null 2>&1 || true
     ok "Coolify 已启动（端口 ${APP_PORT}）"
 }
 
@@ -337,6 +344,38 @@ patch_nginx() {
     ok "nginx 反代配置已生效（mdserver API → 48700，前端 → /abao/，其余 → SPA）"
 }
 
+# ---------- 7b. 部署 panel-api 二开代码（统一登录/数据接口） ----------
+deploy_panel_api() {
+    local psrc="$ABAO_DIR/panel-src"
+    [ -d "$psrc" ] || { warn "panel-src 缺失（源码不含二开补丁，跳过 panel-api；面板登录将不可用）"; return; }
+    info "部署 panel-api 二开代码（路由补丁 + 控制器 + 服务）…"
+    local PY=""
+    for c in python3 python python2; do
+        if command -v "$c" >/dev/null 2>&1; then PY="$c"; break; fi
+    done
+    [ -n "$PY" ] || die "未找到 python，无法为 routes/web.php 打补丁"
+    # 1) config / controller / services 直接进容器
+    docker cp "$psrc/config-panel-api.php" coolify:/var/www/html/config/panel-api.php
+    docker exec coolify mkdir -p /var/www/html/app/Http/Controllers/Panel /var/www/html/app/Services/Panel
+    docker cp "$psrc/PanelApiController.php" coolify:/var/www/html/app/Http/Controllers/Panel/PanelApiController.php
+    for f in "$psrc"/services/*.php; do
+        docker cp "$f" "coolify:/var/www/html/app/Services/Panel/$(basename "$f")" 2>/dev/null || true
+    done
+    # 2) routes/web.php 补丁（幂等，宿主 python 操作，再拷回容器）
+    cp "$psrc/patch_routes.py" /tmp/abao-patch.py
+    cp "$psrc/seg_a.php" /tmp/seg_a.php
+    cp "$psrc/seg_b.php" /tmp/seg_b.php
+    docker cp coolify:/var/www/html/routes/web.php /tmp/abao-web.php
+    if ! "$PY" /tmp/abao-patch.py /tmp/abao-web.php /tmp/seg_a.php /tmp/seg_b.php; then
+        warn "routes/web.php 补丁失败（可能是版本差异），panel-api 路由可能不完整"
+    fi
+    docker cp /tmp/abao-web.php coolify:/var/www/html/routes/web.php
+    # 3) 清缓存，路由/配置立即生效
+    docker exec coolify php artisan config:clear >/dev/null 2>&1 || true
+    docker exec coolify php artisan route:clear >/dev/null 2>&1 || true
+    ok "panel-api 已部署（/panel-api/health|login + 全部数据接口）"
+}
+
 # ---------- 8. Docker 镜像加速（腾讯云内网优先 + DaoCloud 公共加速） ----------
 configure_docker_mirror() {
     local mirrors="https://docker.m.daocloud.io"
@@ -365,6 +404,11 @@ open_firewall() {
         firewall-cmd --permanent --add-port="${MDSERVER_PORT}/tcp" >/dev/null 2>&1 || true
         firewall-cmd --reload >/dev/null 2>&1 || true
         ok "已放行端口 ${APP_PORT} / ${MDSERVER_PORT}"
+        # firewalld 重启会清空 Docker 自定义网络规则，导致容器间（Postgres/Redis/应用）TCP 断连（实测），
+        # 面板服务器统一停用，由云安全组兜底限制公网访问。
+        warn "停用 firewalld（Docker 容器网络需要；请在云安全组仅放行 ${APP_PORT}/${MDSERVER_PORT}）"
+        systemctl stop firewalld >/dev/null 2>&1 || true
+        systemctl disable firewalld >/dev/null 2>&1 || true
     fi
     if command -v getenforce >/dev/null 2>&1 && [ "$(getenforce 2>/dev/null)" = "Enforcing" ]; then
         setenforce 0 2>/dev/null || true
@@ -438,7 +482,7 @@ print_summary() {
 }
 
 main() {
-    info "========== ABao 阿宝面板一键安装 v2.4.2（CentOS7 兼容 + 幂等重跑） =========="
+    info "========== ABao 阿宝面板一键安装 v2.5（panel-api 二开 + CentOS7 兼容 + 幂等重跑） =========="
     require_root
     detect_os
     check_port "$APP_PORT"
@@ -450,6 +494,7 @@ main() {
     start_coolify
     deploy_frontend
     patch_nginx
+    deploy_panel_api
     open_firewall
     install_mdserver
     print_summary
