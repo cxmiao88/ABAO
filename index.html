@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ABao 阿宝面板 - 一站式服务器管理面板 | 免费开源</title>
+<meta name="description" content="ABao 阿宝面板：整合 Coolify 应用部署与 mdserver-web 主机管理的一站式服务器管理面板。一条命令全自动安装，开源免费。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b1220'/%3E%3Cpath d='M20 16h24v8H28v6h12v8H28v6h16v8H20z' fill='%2338bdf8'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap">
+<style>
+:root{
+  --bg:#0b1220; --bg2:#0f172a; --panel:#111c31; --panel2:#16233d;
+  --line:#1e2f4d; --text:#e2e8f0; --muted:#8ba3c3; --dim:#5c7293;
+  --accent:#38bdf8; --accent2:#6366f1; --ok:#34d399; --warn:#fbbf24;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:'Noto Sans SC','Microsoft YaHei',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);line-height:1.7;-webkit-font-smoothing:antialiased}
+a{color:var(--accent);text-decoration:none}
+img{max-width:100%;display:block}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+
+/* ===== 顶部导航 ===== */
+.nav{position:sticky;top:0;z-index:50;background:rgba(11,18,32,.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.nav-inner{display:flex;align-items:center;justify-content:space-between;height:64px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:19px;color:var(--text)}
+.brand svg{width:30px;height:30px}
+.brand em{font-style:normal;color:var(--accent);font-size:12px;font-weight:500;border:1px solid var(--line);padding:2px 8px;border-radius:20px;letter-spacing:1px}
+.nav-links{display:flex;align-items:center;gap:28px;list-style:none}
+.nav-links a{color:var(--muted);font-size:14.5px;transition:color .2s}
+.nav-links a:hover{color:var(--accent)}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 20px;border-radius:8px;font-size:14px;font-weight:500;border:1px solid var(--line);color:var(--text);transition:all .2s;cursor:pointer;background:transparent}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border-color:transparent;color:#fff;font-weight:600}
+.btn-primary:hover{filter:brightness(1.12);transform:translateY(-1px)}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+.menu-btn{display:none;background:none;border:1px solid var(--line);color:var(--text);border-radius:6px;padding:6px 10px;cursor:pointer}
+
+/* ===== Hero ===== */
+.hero{position:relative;overflow:hidden;padding:96px 0 76px}
+.hero-bg{position:absolute;inset:0;z-index:0;opacity:.55}
+.hero-bg img{width:100%;height:100%;object-fit:cover;object-position:center}
+.hero-bg::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(11,18,32,.72) 0%,rgba(11,18,32,.35) 40%,var(--bg) 100%)}
+.hero-inner{position:relative;z-index:1;text-align:center;max-width:820px;margin:0 auto}
+.hero .badge{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--accent);border:1px solid rgba(56,189,248,.35);background:rgba(56,189,248,.08);padding:6px 14px;border-radius:30px;margin-bottom:22px}
+.hero h1{font-size:52px;font-weight:900;letter-spacing:1px;line-height:1.25;margin-bottom:16px}
+.hero h1 span{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p.sub{font-size:18px;color:var(--muted);max-width:640px;margin:0 auto 34px}
+.install-box{background:rgba(17,28,49,.85);border:1px solid var(--line);border-radius:14px;padding:10px 10px 10px 20px;display:flex;align-items:center;gap:14px;max-width:680px;margin:0 auto 18px;text-align:left;backdrop-filter:blur(8px)}
+.install-box code{flex:1;font-family:Consolas,'Courier New',monospace;font-size:13.5px;color:#a5f3fc;white-space:nowrap;overflow-x:auto;padding:8px 0}
+.copy-btn{flex-shrink:0;padding:10px 22px}
+.hero .tips{font-size:13px;color:var(--dim)}
+.hero-stats{display:flex;gap:0;justify-content:center;margin-top:52px;border:1px solid var(--line);border-radius:14px;background:rgba(17,28,49,.6);overflow:hidden;max-width:720px;margin-left:auto;margin-right:auto}
+.stat{flex:1;padding:20px 10px;text-align:center}
+.stat + .stat{border-left:1px solid var(--line)}
+.stat b{display:block;font-size:26px;font-weight:900;color:var(--accent)}
+.stat span{font-size:12.5px;color:var(--dim)}
+
+/* ===== 通用区块 ===== */
+section{padding:72px 0}
+.sec-head{text-align:center;max-width:640px;margin:0 auto 48px}
+.sec-head .tag{display:inline-block;font-size:12px;color:var(--accent);letter-spacing:2px;margin-bottom:10px}
+.sec-head h2{font-size:34px;font-weight:800;margin-bottom:12px}
+.sec-head p{color:var(--muted);font-size:15px}
+
+/* ===== 功能网格 ===== */
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.feat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:26px 24px;transition:border-color .25s,transform .25s}
+.feat:hover{border-color:rgba(56,189,248,.45);transform:translateY(-3px)}
+.feat .ic{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.25);margin-bottom:16px}
+.feat .ic svg{width:22px;height:22px;stroke:var(--accent);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.feat h3{font-size:17px;font-weight:700;margin-bottom:8px}
+.feat p{font-size:13.5px;color:var(--muted)}
+
+/* ===== 双后端 ===== */
+.dual{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.dual-card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:32px 28px;position:relative;overflow:hidden}
+.dual-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.dual-card.coolify::before{background:linear-gradient(90deg,var(--accent),var(--accent2))}
+.dual-card.mdserver::before{background:linear-gradient(90deg,var(--ok),var(--accent))}
+.dual-card h3{font-size:21px;font-weight:800;margin-bottom:4px}
+.dual-card .en{font-size:12.5px;color:var(--dim);margin-bottom:14px}
+.dual-card ul{list-style:none}
+.dual-card li{padding:7px 0;font-size:14px;color:var(--muted);display:flex;gap:10px;align-items:flex-start}
+.dual-card li::before{content:'';width:7px;height:7px;border-radius:50%;background:var(--accent);flex-shrink:0;margin-top:9px}
+
+/* ===== 架构图 ===== */
+.arch-box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:36px 24px;max-width:860px;margin:0 auto}
+.arch{display:flex;align-items:center;justify-content:center;gap:14px;flex-wrap:wrap}
+.arch-node{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:18px 22px;text-align:center;min-width:170px}
+.arch-node b{display:block;font-size:16px;margin-bottom:4px}
+.arch-node span{font-size:12px;color:var(--dim)}
+.arch-node.front{border-color:rgba(56,189,248,.5)}
+.arch-node .port{display:inline-block;margin-top:6px;font-size:11px;font-family:Consolas,monospace;color:var(--accent);background:rgba(56,189,248,.1);padding:2px 8px;border-radius:10px}
+.arch-arrow{display:flex;flex-direction:column;align-items:center;color:var(--dim);font-size:11px;gap:2px}
+.arch-arrow svg{width:22px;height:22px;stroke:var(--accent);fill:none;stroke-width:2}
+.arch-foot{text-align:center;color:var(--dim);font-size:12.5px;margin-top:22px}
+
+/* ===== 安装步骤 ===== */
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;counter-reset:step}
+.step{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:26px 22px;position:relative}
+.step::before{counter-increment:step;content:counter(step);position:absolute;top:18px;right:20px;font-size:34px;font-weight:900;color:rgba(56,189,248,.14)}
+.step h3{font-size:15.5px;font-weight:700;margin-bottom:8px;padding-right:26px}
+.step p{font-size:13px;color:var(--muted)}
+.step .cmd{font-family:Consolas,monospace;font-size:12px;color:#a5f3fc;background:rgba(56,189,248,.07);border:1px solid rgba(56,189,248,.2);border-radius:6px;padding:6px 10px;margin-top:10px;word-break:break-all}
+
+/* ===== 系统要求 ===== */
+.req{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.req-item{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px 20px;text-align:center}
+.req-item b{display:block;font-size:16px;margin-bottom:6px;color:var(--accent)}
+.req-item span{font-size:12.5px;color:var(--dim);line-height:1.5;display:block}
+
+/* ===== FAQ ===== */
+.faq{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.faq-item{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.faq-q{width:100%;text-align:left;background:none;border:none;color:var(--text);font-size:15px;font-weight:500;padding:18px 22px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.faq-q .arrow{transition:transform .25s;color:var(--accent);flex-shrink:0}
+.faq-item.open .arrow{transform:rotate(180deg)}
+.faq-a{display:none;padding:0 22px 18px;font-size:13.5px;color:var(--muted)}
+.faq-item.open .faq-a{display:block}
+
+/* ===== CTA ===== */
+.cta{text-align:center;padding:84px 0;border-top:1px solid var(--line)}
+.cta h2{font-size:32px;font-weight:800;margin-bottom:12px}
+.cta p{color:var(--muted);margin-bottom:28px;font-size:15px}
+
+/* ===== 页脚 ===== */
+footer{border-top:1px solid var(--line);padding:44px 0 30px;background:var(--bg2)}
+.foot-grid{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;margin-bottom:26px}
+.foot-col h4{font-size:13px;color:var(--text);margin-bottom:12px;letter-spacing:1px}
+.foot-col a{display:block;font-size:13px;color:var(--muted);margin-bottom:8px}
+.foot-col a:hover{color:var(--accent)}
+.foot-bottom{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;border-top:1px solid var(--line);padding-top:20px;font-size:12.5px;color:var(--dim)}
+.foot-brand{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted)}
+
+/* ===== toast ===== */
+.toast{position:fixed;left:50%;bottom:32px;transform:translateX(-50%) translateY(20px);background:var(--panel2);border:1px solid rgba(56,189,248,.4);color:var(--text);padding:12px 24px;border-radius:10px;font-size:14px;opacity:0;transition:all .3s;pointer-events:none;z-index:100}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ===== 响应式 ===== */
+@media(max-width:960px){
+  .feat-grid{grid-template-columns:repeat(2,1fr)}
+  .steps{grid-template-columns:repeat(2,1fr)}
+  .req{grid-template-columns:repeat(2,1fr)}
+  .dual{grid-template-columns:1fr}
+}
+@media(max-width:640px){
+  .nav-links{display:none;position:absolute;top:64px;left:0;right:0;background:var(--bg2);border-bottom:1px solid var(--line);flex-direction:column;align-items:flex-start;padding:16px 24px;gap:16px}
+  .nav-links.open{display:flex}
+  .menu-btn{display:block}
+  .hero{padding:64px 0 56px}
+  .hero h1{font-size:34px}
+  .hero p.sub{font-size:15px}
+  .install-box{flex-direction:column;align-items:stretch;padding:16px}
+  .copy-btn{justify-content:center}
+  .hero-stats{flex-direction:column}
+  .stat + .stat{border-left:none;border-top:1px solid var(--line)}
+  .feat-grid,.steps,.req{grid-template-columns:1fr}
+  section{padding:56px 0}
+  .sec-head h2{font-size:26px}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== 顶部导航 ===== -->
+<nav class="nav">
+  <div class="wrap nav-inner">
+    <div class="brand">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="none" stroke="#38bdf8" stroke-width="3"/><path d="M20 16h24v8H28v6h12v8H28v6h16v8H20z" fill="#38bdf8"/></svg>
+      ABao 阿宝面板
+      <em>免费开源</em>
+    </div>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="#features">功能特性</a></li>
+      <li><a href="#arch">架构</a></li>
+      <li><a href="#install">安装</a></li>
+      <li><a href="#faq">常见问题</a></li>
+      <li><a class="btn btn-ghost" href="https://github.com/cxmiao88/ABAO" target="_blank" rel="noopener">GitHub</a></li>
+    </ul>
+    <button class="menu-btn" id="menuBtn" aria-label="打开菜单">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+  </div>
+</nav>
+
+<!-- ===== Hero ===== -->
+<header class="hero">
+  <div class="hero-bg"><img src="assets/hero-datacenter.jpg" alt="ABao 面板数据中心背景"></div>
+  <div class="wrap hero-inner">
+    <div class="badge">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+      整合 Coolify 部署自动化 + mdserver-web 主机管理
+    </div>
+    <h1>一站式服务器管理面板<br><span>ABao 阿宝面板</span></h1>
+    <p class="sub">一条命令，全自动安装。应用部署、网站、数据库、SSL、文件、监控，像管理宝塔一样简单，同时拥有 Heroku 级应用编排能力。</p>
+    <div class="install-box">
+      <code id="installCmd">curl -fsSL https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash</code>
+      <button class="btn btn-primary copy-btn" id="copyBtn">复制安装命令</button>
+    </div>
+    <div class="tips">支持 Ubuntu / Debian / CentOS / Rocky / AlmaLinux · 2 核 2G 起 · 安装仅需一次交互</div>
+    <div class="hero-stats">
+      <div class="stat"><b>2</b><span>后端整合</span></div>
+      <div class="stat"><b>100+</b><span>管理功能</span></div>
+      <div class="stat"><b>1</b><span>条命令安装</span></div>
+      <div class="stat"><b>0</b><span>内置密码</span></div>
+    </div>
+  </div>
+</header>
+
+<!-- ===== 功能特性 ===== -->
+<section id="features">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="tag">FEATURES</span>
+      <h2>开箱即用的完整能力</h2>
+      <p>两个开源后端的全部能力，收进一个现代化面板</p>
+    </div>
+    <div class="feat-grid">
+      <div class="feat">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg></div>
+        <h3>仪表中台</h3>
+        <p>服务器、应用、数据库、站点全局概览，状态卡片与实时图表一屏掌握。</p>
+      </div>
+      <div class="feat">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7v3H3v10h18V12h-2V9a7 7 0 0 0-7-7zM12 4a5 5 0 0 1 5 5v3H7V9a5 5 0 0 1 5-5z"/></svg></div>
+        <h3>应用部署</h3>
+        <p>Git 推送即部署、PR 预览、一键回滚，支持 Nixpacks、Dockerfile、Compose 与镜像。</p>
+      </div>
+      <div class="feat">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M4 6h16v12H4zM8 10h8M8 14h5"/></svg></div>
+        <h3>网站管理</h3>
+        <p>一键建站、伪静态模板、站点文档与日志，主机级建站能力完整保留。</p>
+      </div>
+      <div class="feat">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8.5-8 9-4.5-.5-8-4-8-9V7z"/></svg></div>
+        <h3>SSL 证书</h3>
+        <p>Let's Encrypt / ZeroSSL 自动签发续期，多域名独立管理，HTTPS 一步到位。</p>
+      </div>
+      <div class="feat">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M3 8h18M6 4h12M8 8v12M16 8v12M6 20h12"/></svg></div>
+        <h3>数据库</h3>
+        <p>MySQL、Postgres、Redis 等创建与管理，phpMyAdmin 一键免密直达。</p>
+      </div>
+      <div class="feat">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M4 20h16M6 16l3-9 4 7 3-4 4 6"/></svg></div>
+        <h3>实时监控</h3>
+        <p>CPU、内存、磁盘、网络流量历史曲线，资源状态一目了然。</p>
+      </div>
+      <div class="feat">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zM9 9h6v6H9z"/></svg></div>
+        <h3>文件管理</h3>
+        <p>在线编辑、压缩解压、权限管理、批量操作，主机文件随手可管。</p>
+      </div>
+      <div class="feat">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M4 17V7l8-4 8 4v10l-8 4zM4 7l8 4 8-4M12 11v10"/></svg></div>
+        <h3>容器编排</h3>
+        <p>Docker 容器管理、服务商店 300+ 一键服务、Compose 应用创建。</p>
+      </div>
+      <div class="feat">
+        <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z"/></svg></div>
+        <h3>安全防护</h3>
+        <p>防火墙、WAF、SSH 密钥管理、API 令牌体系、多团队权限隔离。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 双后端 ===== -->
+<section id="dual" style="background:var(--bg2);border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="tag">TWO BACKENDS, ONE PANEL</span>
+      <h2>双后端整合，能力互补</h2>
+      <p>不再需要分别登录 Coolify 与宝塔式面板——一个入口，全部搞定</p>
+    </div>
+    <div class="dual">
+      <div class="dual-card coolify">
+        <h3>Coolify 应用编排</h3>
+        <div class="en">OPEN-SOURCE HEROKU / NETLIFY / VERCEL ALTERNATIVE</div>
+        <ul>
+          <li>Git 推送自动部署，PR 预览环境</li>
+          <li>300+ 一键服务商店</li>
+          <li>Postgres / MySQL / Redis 等托管数据库</li>
+          <li>多服务器 SSH 管理与资源调度</li>
+          <li>部署日志实时流、容器网页终端</li>
+          <li>环境变量、备份、定时任务、通知告警</li>
+        </ul>
+      </div>
+      <div class="dual-card mdserver">
+        <h3>mdserver-web 主机管理</h3>
+        <div class="en">BAOTA-STYLE HOST MANAGEMENT</div>
+        <ul>
+          <li>网站一键建站、伪静态、站点日志</li>
+          <li>文件管理器：在线编辑 / 压缩 / 权限</li>
+          <li>MySQL 数据库、账号、phpMyAdmin 直达</li>
+          <li>SSL 证书自动签发续期</li>
+          <li>FTP、反向代理、跳转、计划任务</li>
+          <li>运行监控、网络防护、软件商店、插件</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 架构 ===== -->
+<section id="arch">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="tag">ARCHITECTURE</span>
+      <h2>简洁清晰的部署架构</h2>
+      <p>安装脚本自动完成容器编排与反向代理，无需手动配置</p>
+    </div>
+    <div class="arch-box">
+      <div class="arch">
+        <div class="arch-node front">
+          <b>ABao 前端面板</b>
+          <span>Vue 3 + Element Plus</span>
+          <div class="port">/abao</div>
+        </div>
+        <div class="arch-arrow">
+          <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </div>
+        <div class="arch-node">
+          <b>Coolify 后端</b>
+          <span>Laravel · Docker 容器</span>
+          <div class="port">:8000</div>
+        </div>
+        <div class="arch-arrow">
+          <svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </div>
+        <div class="arch-node">
+          <b>mdserver-web 后端</b>
+          <span>Python · 主机级管理</span>
+          <div class="port">:48700</div>
+        </div>
+      </div>
+      <div class="arch-foot">浏览器 → 8000 统一入口 → nginx 反向代理分发至 Coolify / mdserver-web · PostgreSQL + Redis 存储</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 安装步骤 ===== -->
+<section id="install" style="background:var(--bg2);border-top:1px solid var(--line)">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="tag">INSTALLATION</span>
+      <h2>像装宝塔一样简单</h2>
+      <p>全自动完成环境检测、依赖安装、服务启动与面板部署</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <h3>执行安装命令</h3>
+        <p>root 用户下执行一行命令，脚本自动开始。</p>
+        <div class="cmd">curl -fsSL …/install.sh | bash</div>
+      </div>
+      <div class="step">
+        <h3>环境自动检测</h3>
+        <p>识别系统版本、CPU 架构、内存，检查端口占用。</p>
+      </div>
+      <div class="step">
+        <h3>Docker 与依赖</h3>
+        <p>自动安装 Docker 与 Compose，拉取 ABao 源码。</p>
+      </div>
+      <div class="step">
+        <h3>设置管理员</h3>
+        <p>交互输入邮箱与密码，密钥全部随机生成。</p>
+      </div>
+      <div class="step">
+        <h3>启动双后端</h3>
+        <p>Coolify 容器启动，mdserver-web 自动安装。</p>
+      </div>
+      <div class="step">
+        <h3>部署前端面板</h3>
+        <p>面板下载部署，nginx 反代规则自动写入。</p>
+      </div>
+      <div class="step">
+        <h3>输出访问地址</h3>
+        <p>显示面板地址与账号，安装即用。</p>
+      </div>
+      <div class="step">
+        <h3>投入使用</h3>
+        <p>原 Coolify / mdserver 登录入口已关闭，统一从新面板进入。</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== 系统要求 ===== -->
+<section id="requirement">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="tag">REQUIREMENTS</span>
+      <h2>系统要求</h2>
+    </div>
+    <div class="req">
+      <div class="req-item"><b>CPU</b><span>2 核及以上（x86_64 / arm64）</span></div>
+      <div class="req-item"><b>内存</b><span>2 GB 及以上</span></div>
+      <div class="req-item"><b>系统</b><span>Ubuntu / Debian / CentOS / Rocky / AlmaLinux</span></div>
+      <div class="req-item"><b>磁盘</b><span>20 GB 及以上（含 Docker 镜像）</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FAQ ===== -->
+<section id="faq" style="background:var(--bg2);border-top:1px solid var(--line)">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="tag">FAQ</span>
+      <h2>常见问题</h2>
+    </div>
+    <div class="faq">
+      <div class="faq-item">
+        <button class="faq-q">ABao 与 Coolify / mdserver-web 是什么关系？<span class="arrow">▾</span></button>
+        <div class="faq-a">ABao 是一个整合型面板：保留 Coolify（应用部署编排）与 mdserver-web（宝塔式主机管理）两个开源后端，用全新的 Vue 前端统一接管。安装后只需记住一个地址、一套账号。</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">为什么关闭了原前端登录入口？<span class="arrow">▾</span></button>
+        <div class="faq-a">为统一安全入口。Coolify 与 mdserver-web 的原登录页面已在安装时被面板接管，所有访问统一跳转到 ABao 登录页，避免多入口带来的管理混乱与安全面扩大。</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">安装脚本里有没有内置默认密码？<span class="arrow">▾</span></button>
+        <div class="faq-a">没有。仓库内不含任何凭据，安装时由你交互设置管理员密码，数据库与 Redis 密钥随机生成，仅保存在服务器本地的 .env 文件中。</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">支持哪些系统？<span class="arrow">▾</span></button>
+        <div class="faq-a">脚本支持 Ubuntu、Debian、CentOS、Rocky、AlmaLinux 等主流 Linux 发行版，x86_64 与 arm64 架构。建议 Ubuntu 22.04+ 或 Debian 12+。</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">数据安全吗？会锁定用户吗？<span class="arrow">▾</span></button>
+        <div class="faq-a">完全开源（Apache-2.0），数据全部保存在你自己的服务器上，随时可以停止使用，正在运行的应用不受影响，不存在任何锁定。</div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q">如何升级到新版本？<span class="arrow">▾</span></button>
+        <div class="faq-a">拉取最新源码后重新执行安装脚本即可完成升级；前端面板随 GitHub Release 发布，脚本自动获取最新版本。</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CTA ===== -->
+<div class="cta">
+  <div class="wrap">
+    <h2>现在就拥有一台全功能面板</h2>
+    <p>开源免费，无需授权，数据自主可控</p>
+    <button class="btn btn-primary" id="ctaCopyBtn" style="font-size:16px;padding:14px 34px">复制安装命令</button>
+  </div>
+</div>
+
+<!-- ===== 页脚 ===== -->
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-col">
+        <h4>产品</h4>
+        <a href="#features">功能特性</a>
+        <a href="#arch">架构说明</a>
+        <a href="#install">安装指南</a>
+        <a href="#requirement">系统要求</a>
+      </div>
+      <div class="foot-col">
+        <h4>资源</h4>
+        <a href="https://github.com/cxmiao88/ABAO" target="_blank" rel="noopener">GitHub 仓库</a>
+        <a href="https://github.com/cxmiao88/ABAO/releases" target="_blank" rel="noopener">Release 发布</a>
+        <a href="https://github.com/cxmiao88/ABAO/issues" target="_blank" rel="noopener">问题反馈</a>
+      </div>
+      <div class="foot-col">
+        <h4>上游项目</h4>
+        <a href="https://github.com/coollabsio/coolify" target="_blank" rel="noopener">Coolify</a>
+        <a href="https://github.com/midoks/mdserver-web" target="_blank" rel="noopener">mdserver-web</a>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <div class="foot-brand">
+        <svg width="20" height="20" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="14" fill="none" stroke="#38bdf8" stroke-width="4"/><path d="M20 16h24v8H28v6h12v8H28v6h16v8H20z" fill="#38bdf8"/></svg>
+        ABao 阿宝面板
+      </div>
+      <div>基于 Apache-2.0 开源 · © 2026 ABao</div>
+    </div>
+  </div>
+</footer>
+
+<div class="toast" id="toast">安装命令已复制，去你的服务器上粘贴执行吧</div>
+
+<script>
+(function(){
+  var cmd = document.getElementById('installCmd').textContent;
+  var toast = document.getElementById('toast');
+  var toastTimer = null;
+  function showToast(){
+    toast.classList.add('show');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toast.classList.remove('show'); }, 2600);
+  }
+  function copyCmd(){
+    var done = function(){
+      showToast();
+    };
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(cmd).then(done, function(){
+        fallbackCopy();
+      });
+    } else {
+      fallbackCopy();
+    }
+  }
+  function fallbackCopy(){
+    var ta = document.createElement('textarea');
+    ta.value = cmd;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch(e) {}
+    document.body.removeChild(ta);
+    showToast();
+  }
+  document.getElementById('copyBtn').addEventListener('click', copyCmd);
+  document.getElementById('ctaCopyBtn').addEventListener('click', copyCmd);
+
+  var menuBtn = document.getElementById('menuBtn');
+  var navLinks = document.getElementById('navLinks');
+  menuBtn.addEventListener('click', function(){
+    navLinks.classList.toggle('open');
+  });
+  navLinks.querySelectorAll('a').forEach(function(a){
+    a.addEventListener('click', function(){ navLinks.classList.remove('open'); });
+  });
+
+  document.querySelectorAll('.faq-item').forEach(function(item){
+    var q = item.querySelector('.faq-q');
+    q.addEventListener('click', function(){
+      item.classList.toggle('open');
+    });
+  });
+})();
+</script>
+</body>
+</html>
