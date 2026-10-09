@@ -27,7 +27,7 @@ ABAO_DIR="/data/coolify/source"          # Coolify/ABao 源码目录
 FRONTEND_ZIP_URL="https://github.com/cxmiao88/ABAO/releases/latest/download/abao-frontend.zip"
 FRONTEND_ZIP_GH="https://ghproxy.com/https://github.com/cxmiao88/ABAO/releases/latest/download/abao-frontend.zip"
 SRC_ZIP_URL="https://github.com/cxmiao88/ABAO/archive/refs/heads/main.zip"
-SRC_ZIP_GH="https://ghproxy.com/https://github.com/cxmiao88/ABAO/archive/refs/heads/main.zip"
+SRC_ZIP_GH="https://ghfast.top/https://github.com/cxmiao88/ABAO/archive/refs/heads/main.zip"
 APP_PORT="${APP_PORT:-8000}"
 MDSERVER_PORT="${MDSERVER_PORT:-48700}"
 LOG_FILE="/tmp/abao-install.log"
@@ -102,6 +102,7 @@ gpgkey=https://mirrors.cloud.tencent.com/docker-ce/linux/centos/gpg
        https://mirrors.aliyun.com/docker-ce/linux/centos/gpg
 skip_if_unavailable=1
 EOF
+    $PKG clean expire-cache >/dev/null 2>&1 || true
     $PKG install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin 2>&1 | tail -5
     command -v docker >/dev/null 2>&1 || return 1
 }
