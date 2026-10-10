@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-#  ABao 阿宝面板 - 一键安装脚本 v2.6.12（2026-10-11 更新：启用IP转发 net.ipv4.ip_forward=1）
+#  ABao 阿宝面板 - 一键安装脚本 v2.6.13（2026-10-11 更新：公网IP自动识别 + 面板登录账号mdserver自动显示）
 #  ---------------------------------------------------------------------------
 #  用法（root 用户执行）：
 #    curl -fsSL https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash
@@ -597,10 +597,21 @@ install_web_service() {
 }
 
 # ---------- 10. 输出结果 ----------
+get_public_ip() {
+    local p
+    # 腾讯云 metadata（内网可访问）→ ipify → 内网 IP 兜底
+    p="$(curl -s --max-time 5 http://metadata.tencentyun.com/latest/meta-data/public-ipv4 2>/dev/null)"
+    [ -n "$p" ] || p="$(curl -s --max-time 5 https://api.ipify.org 2>/dev/null)"
+    [ -n "$p" ] || p="$(curl -s --max-time 5 https://ifconfig.me 2>/dev/null)"
+    [ -n "$p" ] || p="$(hostname -I 2>/dev/null | awk '{print $1}')"
+    echo "${p:-服务器IP}"
+}
 print_summary() {
-    local ip
-    ip="$(hostname -I 2>/dev/null | awk '{print $1}')"
-    ip="${ip:-服务器IP}"
+    local ip md_user md_pass
+    ip="$(get_public_ip)"
+    # mdserver 账号密码：从安装日志提取（mdserver 装完会打印 |-username: / |-password:）
+    md_user="$(grep -E '\|-username:' /tmp/mdserver-install.log 2>/dev/null | tail -1 | sed 's/.*username: *//' | tr -d '[:space:]')"
+    md_pass="$(grep -E '\|-password:' /tmp/mdserver-install.log 2>/dev/null | tail -1 | sed 's/.*password: *//' | tr -d '[:space:]')"
     echo ""
     echo "================================================================"
     echo "   ABao 阿宝面板安装完成！"
@@ -617,7 +628,19 @@ print_summary() {
         echo "   管理员密码: $([ -f "$ABAO_DIR/.env" ] && grep '^ROOT_USER_PASSWORD=' "$ABAO_DIR/.env" | cut -d= -f2)"
     fi
     echo ""
-    echo "   mdserver 账号: 安装结束时 mdserver 脚本上方输出中的账号/密码（或运行 mw 查看）"
+    echo "   --- 面板登录账号（重要：前端登录认 mdserver 账号） ---"
+    if [ -n "$md_user" ] && [ -n "$md_pass" ]; then
+        echo "   面板用户名: ${md_user}"
+        echo "   面板密码:   ${md_pass}"
+        echo "   （上述已写入 $ABAO_DIR/.abao-credentials）"
+        {
+            echo "面板用户名: ${md_user}"
+            echo "面板密码:   ${md_pass}"
+        } >> "$ABAO_DIR/.abao-credentials"
+    else
+        echo "   面板用户名/密码: 安装结束时 mdserver 脚本上方输出中的账号/密码（或运行 mw 查看）"
+    fi
+    echo ""
     echo "   自定义账号:    重装时可用环境变量 ABAO_ADMIN_EMAIL / ABAO_ADMIN_PASSWORD 指定"
     echo ""
     echo "   CLI 命令:      ab 或 AB（等同宝塔 bt，管理面板信息/改密码/改端口等）"
@@ -631,7 +654,7 @@ print_summary() {
 }
 
 main() {
-    info "========== ABao 阿宝面板一键安装 v2.6.12（启用IP转发，Docker端口映射外网必通） =========="
+    info "========== ABao 阿宝面板一键安装 v2.6.13（公网IP+面板登录账号自动显示） =========="
     require_root
     detect_os
     enable_ip_forward
