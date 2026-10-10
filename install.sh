@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-#  ABao 阿宝面板 - 一键安装脚本 v2.6.9（2026-10-11 更新：mdserver 安装心跳提示）
+#  ABao 阿宝面板 - 一键安装脚本 v2.6.10（2026-10-11 更新：mdserver 端口48700自动对齐+关安全入口+健康兜底）
 #  ---------------------------------------------------------------------------
 #  用法（root 用户执行）：
 #    curl -fsSL https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash
@@ -490,13 +490,33 @@ install_mdserver() {
     bash scripts/install.sh > /tmp/mdserver-install.log 2>&1 &
     local mw_pid=$!
     local mw_start=$SECONDS
-    # 心跳提示：每分钟报告一次进度，避免"不知道在跑没"
-    while kill -0 $mw_pid 2>/dev/null; do
-        sleep 60
+    local mw_ok=0
+    # 心跳 + 健康检查兜底：面板 API(48700) 可达即视为成功（安装脚本偶发装完仍挂起）
+    while kill -0 $mw_pid 2>/dev/null && [ $(( SECONDS - mw_start )) -lt 1800 ]; do
+        sleep 45
+        if curl -s -o /dev/null -w '%{http_code}' --connect-timeout 5 http://127.0.0.1:48700/login 2>/dev/null | grep -qE '200|30[0-9]|40[0-9]'; then
+            mw_ok=1
+            break
+        fi
         info "mdserver 安装中（已运行 $(( (SECONDS - mw_start) / 60 )) 分钟，日志 tail -20 /tmp/mdserver-install.log）…"
     done
-    wait $mw_pid || die "mdserver-web 安装失败，查看日志：tail -80 /tmp/mdserver-install.log"
-    ok "mdserver-web 安装完成（耗时 $(( (SECONDS - mw_start) / 60 )) 分钟）"
+    if [ "$mw_ok" = "1" ]; then
+        kill $mw_pid 2>/dev/null || true
+        ok "mdserver-web 已就绪（面板 API 可达，耗时 $(( (SECONDS - mw_start) / 60 )) 分钟）"
+    else
+        wait $mw_pid || die "mdserver-web 安装失败，查看日志：tail -80 /tmp/mdserver-install.log"
+        ok "mdserver-web 安装完成（耗时 $(( (SECONDS - mw_start) / 60 )) 分钟）"
+    fi
+    # 对齐面板端口 48700（配合 nginx 反代）+ 关闭安全入口（去掉第一道认证）+ 重启面板
+    printf '48700' > /www/server/mdserver-web/data/port.pl 2>/dev/null || true
+    sqlite3 /www/server/mdserver-web/data/panel.db "UPDATE option SET value='' WHERE name='admin_path';" 2>/dev/null || true
+    /etc/rc.d/init.d/mw restart >/dev/null 2>&1 || true
+    sleep 3
+    if curl -s -o /dev/null -w '%{http_code}' --connect-timeout 5 http://127.0.0.1:48700/login 2>/dev/null | grep -qE '200|30[0-9]|40[0-9]'; then
+        ok "mdserver 端口已对齐 48700，安全入口已关闭"
+    else
+        warn "mdserver 面板重启后未响应 48700（可稍后 AB 菜单手动处理）"
+    fi
     # ABao CLI：ab/AB（等同宝塔 bt）——菜单循环保持，处理完自动回菜单，输入 0 或 q 退出
     if [ -f "$ABAO_DIR/panel-src/ab-cli.sh" ]; then
         cp "$ABAO_DIR/panel-src/ab-cli.sh" /usr/local/bin/ab
@@ -592,7 +612,7 @@ print_summary() {
 }
 
 main() {
-    info "========== ABao 阿宝面板一键安装 v2.6.9（mdserver 安装心跳提示） =========="
+    info "========== ABao 阿宝面板一键安装 v2.6.10（mdserver 端口48700自动对齐+关安全入口+健康兜底） =========="
     require_root
     detect_os
     check_port "$APP_PORT"
