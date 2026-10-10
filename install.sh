@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-#  ABao 阿宝面板 - 一键安装脚本 v2.6.13（2026-10-11 更新：公网IP自动识别 + 面板登录账号mdserver自动显示）
+#  ABao 阿宝面板 - 一键安装脚本 v2.6.14（2026-10-11 更新：随机码入口 /随机码 直达面板，/abao/ 与原入口 404/403 隐藏）
 #  ---------------------------------------------------------------------------
 #  用法（root 用户执行）：
 #    curl -fsSL https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash
@@ -360,13 +360,23 @@ deploy_frontend() {
     ok "前端面板已部署"
 }
 
-# ---------- 7. 覆盖容器 nginx 配置（ABao 反代规则） ----------
+# ---------- 7. 覆盖容器 nginx 配置（ABao 反代规则 + 随机码入口） ----------
 patch_nginx() {
-    info "写入 ABao nginx 反代配置…"
-    docker cp "$ABAO_DIR/docker/abao-nginx-http.conf" coolify:/etc/nginx/site-opts.d/http.conf
+    info "写入 ABao nginx 反代配置（随机码入口隐藏面板）…"
+    # 随机码：已生成则复用（重跑不换），否则新生成，持久化到 .env
+    local entry_code
+    entry_code="$(grep '^ABAO_ENTRY_CODE=' "$ABAO_DIR/.env" 2>/dev/null | cut -d= -f2)"
+    if [ -z "$entry_code" ]; then
+        entry_code="$(openssl rand -hex 8 2>/dev/null)"
+        echo "ABAO_ENTRY_CODE=${entry_code}" >> "$ABAO_DIR/.env"
+        ok "已生成面板入口随机码（写 .env 持久化）"
+    fi
+    # 占位符替换 → 临时文件 → 进容器
+    sed "s|__ABAO_ENTRY__|${entry_code}|g" "$ABAO_DIR/docker/abao-nginx-http.conf" > /tmp/abao-nginx-http.conf
+    docker cp /tmp/abao-nginx-http.conf coolify:/etc/nginx/site-opts.d/http.conf
     docker exec coolify nginx -t >/dev/null 2>&1 && docker exec coolify nginx -s reload >/dev/null 2>&1 || \
         warn "nginx 配置重载失败（稍后可手动：docker exec coolify nginx -s reload）"
-    ok "nginx 反代配置已生效（mdserver API → 48700，前端 → /abao/，其余 → SPA）"
+    ok "nginx 反代配置已生效（入口 http://IP:${APP_PORT}/${entry_code}，/abao/ 与原入口均已隐藏）"
 }
 
 # ---------- 7b. 部署 panel-api 二开代码（统一登录/数据接口） ----------
@@ -607,8 +617,9 @@ get_public_ip() {
     echo "${p:-服务器IP}"
 }
 print_summary() {
-    local ip md_user md_pass
+    local ip md_user md_pass entry_code
     ip="$(get_public_ip)"
+    entry_code="$(grep '^ABAO_ENTRY_CODE=' "$ABAO_DIR/.env" 2>/dev/null | cut -d= -f2)"
     # mdserver 账号密码：从安装日志提取（mdserver 装完会打印 |-username: / |-password:）
     md_user="$(grep -E '\|-username:' /tmp/mdserver-install.log 2>/dev/null | tail -1 | sed 's/.*username: *//' | tr -d '[:space:]')"
     md_pass="$(grep -E '\|-password:' /tmp/mdserver-install.log 2>/dev/null | tail -1 | sed 's/.*password: *//' | tr -d '[:space:]')"
@@ -616,9 +627,14 @@ print_summary() {
     echo "================================================================"
     echo "   ABao 阿宝面板安装完成！"
     echo "----------------------------------------------------------------"
-    echo "   面板地址:   http://${ip}:${APP_PORT}/abao/index.html"
-    echo "   本地地址:   http://localhost:${APP_PORT}/abao/index.html"
-    echo "   (Coolify/mdserver 原登录入口均已关闭，统一从此进入)"
+    if [ -n "$entry_code" ]; then
+        echo "   面板地址:   http://${ip}:${APP_PORT}/${entry_code}"
+        echo "   本地地址:   http://localhost:${APP_PORT}/${entry_code}"
+        echo "   (随机码入口，直接访问 / 或 /abao/ 均 404/403；Coolify/mdserver 原登录入口已关闭)"
+    else
+        echo "   面板地址:   http://${ip}:${APP_PORT}/abao/index.html"
+        echo "   本地地址:   http://localhost:${APP_PORT}/abao/index.html"
+    fi
     echo ""
     if [ -f "$ABAO_DIR/.abao-credentials" ]; then
         echo "   --- 管理员账号（已存 $ABAO_DIR/.abao-credentials） ---"
@@ -643,6 +659,8 @@ print_summary() {
     echo ""
     echo "   自定义账号:    重装时可用环境变量 ABAO_ADMIN_EMAIL / ABAO_ADMIN_PASSWORD 指定"
     echo ""
+    echo "   面板入口随机码: $entry_code（存 /data/coolify/source/.env ABAO_ENTRY_CODE；忘记可用 mw 或查看 .env）"
+    echo ""
     echo "   CLI 命令:      ab 或 AB（等同宝塔 bt，管理面板信息/改密码/改端口等）"
     echo ""
     echo "   Web 服务:      面板「软件商店」→ 安装 openresty（网站/建站功能需要，后台实时查看日志）"
@@ -654,7 +672,7 @@ print_summary() {
 }
 
 main() {
-    info "========== ABao 阿宝面板一键安装 v2.6.13（公网IP+面板登录账号自动显示） =========="
+    info "========== ABao 阿宝面板一键安装 v2.6.14（随机码入口隐藏面板） =========="
     require_root
     detect_os
     enable_ip_forward
