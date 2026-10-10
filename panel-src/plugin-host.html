@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>ABao 插件配置</title>
+<link rel="stylesheet" href="/static/css/site.css">
+<link rel="stylesheet" href="/static/layer/theme/default/layer.css">
+<script src="/static/js/jquery-1.10.2.min.js"></script>
+<script src="/static/layer/layer.js"></script>
+<script src="/static/app/public.js"></script>
+</head>
+<body style="margin:0;background:#f5f7fa">
+<div id="plugin-host" style="padding:14px"></div>
+<script>
+$(function () {
+  var q = new URLSearchParams(location.search);
+  var name = q.get('name') || '';
+  if (!name) {
+    $('#plugin-host').html('<div style="padding:40px;text-align:center;color:#999">缺少插件参数</div>');
+    return;
+  }
+  $.get('/plugins/setting?name=' + encodeURIComponent(name), function (html) {
+    $('#plugin-host').html(html);
+  }).fail(function () {
+    $('#plugin-host').html('<div style="padding:40px;text-align:center;color:#999">插件页加载失败，请确认已登录面板</div>');
+  });
+});
+</script>
+</body>
+</html>
