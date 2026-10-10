@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-#  ABao 阿宝面板 - 一键安装脚本 v2.6.7（2026-10-11 更新：mdserver 校验放宽到 scripts/install.sh）
+#  ABao 阿宝面板 - 一键安装脚本 v2.6.8（2026-10-11 更新：Web 服务改后台软件商店安装，宝塔模式）
 #  ---------------------------------------------------------------------------
 #  用法（root 用户执行）：
 #    curl -fsSL https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash
@@ -8,8 +8,8 @@
 #  功能：环境检测 → Docker 安装（国内镜像优先）→ 拉取 ABao 源码 →
 #        生成安全配置（全自动，无交互）→ 启动 Coolify(8000) →
 #        部署前端面板 → 覆盖容器 nginx 反代 → 安装 mdserver-web(48700) →
-#        安装 Web 服务 openresty(80，站点访问必需) → 放行防火墙 →
-#        输出访问地址与初始账号。
+#        放行防火墙 → 输出访问地址与初始账号。
+#        Web 服务（openresty，建站用）不自动编译，到面板后台「软件商店」安装（可实时看日志）。
 #  特性：
 #    - 零凭据：仓库内不含任何默认密码，安装时自动随机生成并仅在结尾显示
 #    - 无交互：全程自动，支持 `curl | bash` 管道模式（不再依赖 stdin 输入）
@@ -575,6 +575,8 @@ print_summary() {
     echo ""
     echo "   CLI 命令:      ab 或 AB（等同宝塔 bt，管理面板信息/改密码/改端口等）"
     echo ""
+    echo "   Web 服务:      面板「软件商店」→ 安装 openresty（网站/建站功能需要，后台实时查看日志）"
+    echo ""
     echo "   常用命令:   mw                # mdserver 面板 CLI"
     echo "               docker ps         # 查看容器状态"
     echo "               tail -f /tmp/abao-install.log   # 安装日志"
@@ -582,7 +584,7 @@ print_summary() {
 }
 
 main() {
-    info "========== ABao 阿宝面板一键安装 v2.6.7（mdserver 校验放宽到 scripts/install.sh） =========="
+    info "========== ABao 阿宝面板一键安装 v2.6.8（Web 服务改后台软件商店安装，宝塔模式） =========="
     require_root
     detect_os
     check_port "$APP_PORT"
@@ -597,7 +599,6 @@ main() {
     deploy_panel_api
     open_firewall
     install_mdserver
-    install_web_service
     print_summary
     ok "全部完成！如需修改密码：面板「设置」中修改；数据库/Redis 密码见 $ABAO_DIR/.env"
 }
