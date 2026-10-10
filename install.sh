@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-#  ABao 阿宝面板 - 一键安装脚本 v2.5.2（2026-10-10 更新：ab/AB CLI 菜单循环保持，0/q 退出）
+#  ABao 阿宝面板 - 一键安装脚本 v2.6.0（2026-10-11 更新：自动安装 Web 服务 openresty）
 #  ---------------------------------------------------------------------------
 #  用法（root 用户执行）：
 #    curl -fsSL https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash
@@ -8,7 +8,8 @@
 #  功能：环境检测 → Docker 安装（国内镜像优先）→ 拉取 ABao 源码 →
 #        生成安全配置（全自动，无交互）→ 启动 Coolify(8000) →
 #        部署前端面板 → 覆盖容器 nginx 反代 → 安装 mdserver-web(48700) →
-#        放行防火墙 → 输出访问地址与初始账号。
+#        安装 Web 服务 openresty(80，站点访问必需) → 放行防火墙 →
+#        输出访问地址与初始账号。
 #  特性：
 #    - 零凭据：仓库内不含任何默认密码，安装时自动随机生成并仅在结尾显示
 #    - 无交互：全程自动，支持 `curl | bash` 管道模式（不再依赖 stdin 输入）
@@ -461,6 +462,54 @@ install_mdserver() {
     ok "CLI 命令已就绪：ab/AB（阿宝面板命令，等同宝塔 bt；菜单循环，0 或 q 退出）"
 }
 
+# ---------- 9b. 安装 Web 服务（openresty，站点访问必需） ----------
+install_web_service() {
+    if [ -f /www/server/openresty/nginx/sbin/nginx ]; then
+        ok "openresty 已安装，跳过"
+        return
+    fi
+    info "安装 Web 服务 openresty（站点访问必需，源码编译约 10-30 分钟）…"
+    # 编译依赖（按包管理器）
+    case "$PKG" in
+        apt-get) $PKG install -y build-essential libpcre3-dev libssl-dev zlib1g-dev unzip 2>&1 | tail -2 ;;
+        yum|dnf) $PKG install -y gcc make pcre-devel openssl-devel zlib-devel unzip 2>&1 | tail -2 ;;
+    esac
+    local PLUG=/www/server/mdserver-web/plugins/openresty
+    [ -d "$PLUG/versions" ] || { warn "mdserver openresty 插件缺失，跳过 Web 服务安装"; return; }
+    # 版本选择：RHEL7 系（CentOS7 等）gcc 4.8 与新版 lua-cjson 不兼容（C99 报错），固定 1.25.3；其余用 1.31.1
+    local VER=1.31.1
+    case "$OS_ID" in
+        centos|rhel|rocky|almalinux|opencloudos|kylin|openeuler)
+            [ "${OS_VER%%.*}" -le 7 ] 2>/dev/null && VER=1.25.3 ;;
+    esac
+    # 修补 brotli（git clone 常失败导致 configure 报错，非必需模块）与损坏的 openssl 缓存
+    local f
+    for f in "$PLUG/versions/1.31.1/install.sh" "$PLUG/versions/1.25.3/install.sh"; do
+        [ -f "$f" ] || continue
+        sed -i 's|^[[:space:]]*git clone https://github.com/wxx9248/ngx_brotli.git|# SKIP-BROTLI: \&|' "$f"
+        sed -i 's|^[[:space:]]*cd ${openrestyDir} && git clone https://github.com/wxx9248/ngx_brotli.git|# SKIP-BROTLI: \&|' "$f"
+        sed -i 's|^[[:space:]]*OPTIONS="${OPTIONS} --add-module=${openrestyDir}/ngx_brotli"|# SKIP-BROTLI: \&|' "$f"
+    done
+    rm -f /www/server/source/openresty/openssl-*.tar.gz   # 中断下载可能产生 0 字节损坏缓存
+    # 编译安装
+    cd "$PLUG" && bash install.sh install "$VER" > /tmp/abao-openresty-install.log 2>&1
+    if [ ! -f /www/server/openresty/nginx/sbin/nginx ]; then
+        warn "openresty 安装未完成（详见 tail -80 /tmp/abao-openresty-install.log）；站点 Web 访问可能不可用"
+        return
+    fi
+    # 补齐 php 占位 + rewrite 空文件（站点 conf include 必需，缺失会导致 nginx -t 失败）
+    mkdir -p /www/server/web_conf/php/conf /www/server/web_conf/nginx/rewrite
+    [ -f /www/server/web_conf/php/conf/enable-php-0.conf ] || echo 'set $PHP_ENV 0;' > /www/server/web_conf/php/conf/enable-php-0.conf
+    local d
+    for d in $(ls /www/server/web_conf/nginx/vhost/*.conf 2>/dev/null | xargs -n1 basename | sed 's/\.conf$//'); do
+        [ -f "/www/server/web_conf/nginx/rewrite/$d.conf" ] || echo "# ABao auto-created" > "/www/server/web_conf/nginx/rewrite/$d.conf"
+    done
+    # 校验并启动
+    /www/server/openresty/nginx/sbin/nginx -t > /tmp/abao-nginx-t.log 2>&1 || { warn "nginx 配置校验失败：$(tail -5 /tmp/abao-nginx-t.log)"; return; }
+    /etc/init.d/openresty start >/dev/null 2>&1 || /www/server/openresty/init.d/openresty start >/dev/null 2>&1 || true
+    ok "openresty Web 服务已就绪（80 端口，站点可访问）"
+}
+
 # ---------- 10. 输出结果 ----------
 print_summary() {
     local ip
@@ -494,7 +543,7 @@ print_summary() {
 }
 
 main() {
-    info "========== ABao 阿宝面板一键安装 v2.5.2（panel-api 二开 + ab CLI 循环 + CentOS7 兼容） =========="
+    info "========== ABao 阿宝面板一键安装 v2.6.0（自动安装 Web 服务 openresty） =========="
     require_root
     detect_os
     check_port "$APP_PORT"
@@ -509,6 +558,7 @@ main() {
     deploy_panel_api
     open_firewall
     install_mdserver
+    install_web_service
     print_summary
     ok "全部完成！如需修改密码：面板「设置」中修改；数据库/Redis 密码见 $ABAO_DIR/.env"
 }
