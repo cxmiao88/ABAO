@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-#  ABao 阿宝面板 - 一键安装脚本 v2.6.11（2026-10-11 更新：mdserver 兜底改日志完成标志）
+#  ABao 阿宝面板 - 一键安装脚本 v2.6.12（2026-10-11 更新：启用IP转发 net.ipv4.ip_forward=1）
 #  ---------------------------------------------------------------------------
 #  用法（root 用户执行）：
 #    curl -fsSL https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash
@@ -423,6 +423,20 @@ EOF
 }
 
 # ---------- 9. 防火墙与 SELinux ----------
+# ---------- 0. 启用 IP 转发（Docker 端口映射依赖；部分云厂商镜像默认关闭导致外网访问不了） ----------
+enable_ip_forward() {
+    if [ "$(cat /proc/sys/net/ipv4/ip_forward 2>/dev/null)" != "1" ]; then
+        echo 1 > /proc/sys/net/ipv4/ip_forward
+        sysctl -w net.ipv4.ip_forward=1 >/dev/null 2>&1
+    fi
+    if ! grep -q '^net.ipv4.ip_forward' /etc/sysctl.conf 2>/dev/null; then
+        echo 'net.ipv4.ip_forward = 1' >> /etc/sysctl.conf
+    else
+        sed -i 's/^net.ipv4.ip_forward.*/net.ipv4.ip_forward = 1/' /etc/sysctl.conf 2>/dev/null || true
+    fi
+    sysctl -p >/dev/null 2>&1 || true
+    ok "已启用 IP 转发（net.ipv4.ip_forward=1，Docker 端口映射依赖）"
+}
 open_firewall() {
     if systemctl is-active firewalld >/dev/null 2>&1; then
         firewall-cmd --permanent --add-port="${APP_PORT}/tcp" >/dev/null 2>&1 || true
@@ -617,9 +631,10 @@ print_summary() {
 }
 
 main() {
-    info "========== ABao 阿宝面板一键安装 v2.6.11（mdserver 兜底改日志完成标志） =========="
+    info "========== ABao 阿宝面板一键安装 v2.6.12（启用IP转发，Docker端口映射外网必通） =========="
     require_root
     detect_os
+    enable_ip_forward
     check_port "$APP_PORT"
     check_port "$MDSERVER_PORT"
     install_docker
