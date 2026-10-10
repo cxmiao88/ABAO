@@ -3,13 +3,46 @@
 <head>
 <meta charset="utf-8">
 <title>ABao 插件配置</title>
+<script>
+// 主题检测：优先 URL 参数 mode（前端实时传入），否则 localStorage.mw_mode；dark 时注入深色覆盖
+(function () {
+  var mode = new URLSearchParams(location.search).get('mode') || localStorage.getItem('mw_mode') || 'light';
+  if (mode !== 'dark') return;
+  document.documentElement.setAttribute('data-mode', 'dark');
+  var s = document.createElement('style');
+  s.textContent =
+    'body{background:#17181c !important;color:#d8dae0 !important;}' +
+    '.bt-warp,.bt-w-main,.bt-w-con,.bt-form,.layui-layer,.layui-layer-content,.layui-layer-page{background:#1e2025 !important;color:#d8dae0 !important;}' +
+    '.bt-label,label,.bt-form label,.bt-w-main h3,.bt-w-main h4{color:#c9cdd6 !important;}' +
+    '.bt-input-text-shell,.bt-input-text,input[type=text],input[type=password],input[type=number],input[type=email],select,textarea{background:#23262c !important;border-color:#3a3f47 !important;color:#e8eaee !important;}' +
+    '.bt-checkbox,.bt-radio{background:#23262c !important;border-color:#3a3f47 !important;}' +
+    'table{color:#d8dae0 !important;}' +
+    'table th{background:#26292f !important;color:#e8eaee !important;border-color:#343941 !important;}' +
+    'table td{border-color:#343941 !important;background:transparent !important;}' +
+    'table tr:hover td{background:#23262c !important;}' +
+    '.layui-layer-title{background:#26292f !important;color:#e8eaee !important;border-color:#343941 !important;}' +
+    '.layui-layer-btn a{background:#2b2f36 !important;color:#d8dae0 !important;border-color:#3a3f47 !important;}' +
+    'a{color:#5ea8ff !important;}' +
+    '.bt-progress,.bt-progress-bar{background:#2b2f36 !important;}' +
+    '.bt-logs{background:#111318 !important;color:#c8ccd4 !important;}' +
+    'h1,h2,h3,h4,.title{color:#e8eaee !important;}';
+  document.head.appendChild(s);
+  // 父窗口切换主题时实时跟随（同域可访问）
+  try {
+    window.parent.addEventListener('mw-theme-change', function (e) {
+      var m = (e.detail && e.detail.mode) || 'dark';
+      if (m === 'dark' && !document.documentElement.getAttribute('data-mode')) { location.reload(); }
+    });
+  } catch (e) {}
+})();
+</script>
 <link rel="stylesheet" href="/static/css/site.css">
 <link rel="stylesheet" href="/static/layer/theme/default/layer.css">
 <script src="/static/js/jquery-1.10.2.min.js"></script>
 <script src="/static/layer/layer.js"></script>
 <script src="/static/app/public.js"></script>
 </head>
-<body style="margin:0;background:#f5f7fa">
+<body style="margin:0">
 <div id="plugin-host" style="padding:14px"></div>
 <script>
 $(function () {
