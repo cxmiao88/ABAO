@@ -548,8 +548,8 @@ install_mdserver() {
     fi
     # ABao CLI：ab/AB（等同宝塔 bt）——菜单循环保持，处理完自动回菜单，输入 0 或 q 退出
     if [ -f "$ABAO_DIR/panel-src/ab-cli.sh" ]; then
-        cp "$ABAO_DIR/panel-src/ab-cli.sh" /usr/local/bin/ab
-        cp "$ABAO_DIR/panel-src/ab-cli.sh" /usr/local/bin/AB
+        /bin/cp -f "$ABAO_DIR/panel-src/ab-cli.sh" /usr/local/bin/ab
+        /bin/cp -f "$ABAO_DIR/panel-src/ab-cli.sh" /usr/local/bin/AB
         chmod 755 /usr/local/bin/ab /usr/local/bin/AB
     else
         ln -sf /etc/rc.d/init.d/mw /usr/local/bin/ab 2>/dev/null || true
