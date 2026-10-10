@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-#  ABao 阿宝面板 - 一键安装脚本 v2.6.8（2026-10-11 更新：Web 服务改后台软件商店安装，宝塔模式）
+#  ABao 阿宝面板 - 一键安装脚本 v2.6.9（2026-10-11 更新：mdserver 安装心跳提示）
 #  ---------------------------------------------------------------------------
 #  用法（root 用户执行）：
 #    curl -fsSL https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash
@@ -487,8 +487,16 @@ install_mdserver() {
     ok "mdserver 源码就绪：/www/server/mdserver-web"
     info "运行 mdserver-web 安装脚本（自动检测环境，约 5-15 分钟，日志 /tmp/mdserver-install.log）…"
     cd /www/server/mdserver-web
-    bash scripts/install.sh > /tmp/mdserver-install.log 2>&1 || die "mdserver-web 安装失败，查看日志：tail -80 /tmp/mdserver-install.log"
-    ok "mdserver-web 安装完成"
+    bash scripts/install.sh > /tmp/mdserver-install.log 2>&1 &
+    local mw_pid=$!
+    local mw_start=$SECONDS
+    # 心跳提示：每分钟报告一次进度，避免"不知道在跑没"
+    while kill -0 $mw_pid 2>/dev/null; do
+        sleep 60
+        info "mdserver 安装中（已运行 $(( (SECONDS - mw_start) / 60 )) 分钟，日志 tail -20 /tmp/mdserver-install.log）…"
+    done
+    wait $mw_pid || die "mdserver-web 安装失败，查看日志：tail -80 /tmp/mdserver-install.log"
+    ok "mdserver-web 安装完成（耗时 $(( (SECONDS - mw_start) / 60 )) 分钟）"
     # ABao CLI：ab/AB（等同宝塔 bt）——菜单循环保持，处理完自动回菜单，输入 0 或 q 退出
     if [ -f "$ABAO_DIR/panel-src/ab-cli.sh" ]; then
         cp "$ABAO_DIR/panel-src/ab-cli.sh" /usr/local/bin/ab
@@ -584,7 +592,7 @@ print_summary() {
 }
 
 main() {
-    info "========== ABao 阿宝面板一键安装 v2.6.8（Web 服务改后台软件商店安装，宝塔模式） =========="
+    info "========== ABao 阿宝面板一键安装 v2.6.9（mdserver 安装心跳提示） =========="
     require_root
     detect_os
     check_port "$APP_PORT"
