@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-#  ABao 阿宝面板 - 一键安装脚本 v2.6.15（2026-10-11 更新：随机码入口 default_type text/html，浏览器直接渲染不下载）
+#  ABao 阿宝面板 - 一键安装脚本 v2.6.16（2026-10-11 更新：随机码入口 add_header Cache-Control no-store 防浏览器缓存下载决策）
 #  ---------------------------------------------------------------------------
 #  用法（root 用户执行）：
 #    curl -fsSL https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash
@@ -672,7 +672,7 @@ print_summary() {
 }
 
 main() {
-    info "========== ABao 阿宝面板一键安装 v2.6.15（随机码入口直接渲染，不下载） =========="
+    info "========== ABao 阿宝面板一键安装 v2.6.16（随机码入口 no-store 防缓存） =========="
     require_root
     detect_os
     enable_ip_forward
