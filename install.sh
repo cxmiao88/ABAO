@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-#  ABao 阿宝面板 - 一键安装脚本 v2.6.6（2026-10-11 更新：mdserver cp 直放 + 前端 root 删除）
+#  ABao 阿宝面板 - 一键安装脚本 v2.6.7（2026-10-11 更新：mdserver 校验放宽到 scripts/install.sh）
 #  ---------------------------------------------------------------------------
 #  用法（root 用户执行）：
 #    curl -fsSL https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash
@@ -443,7 +443,7 @@ open_firewall() {
 
 # ---------- 9. 安装 mdserver-web ----------
 install_mdserver() {
-    if [ -f /www/server/mdserver-web/start.py ] || command -v mw >/dev/null 2>&1; then
+    if [ -f /www/server/mdserver-web/scripts/install.sh ] || [ -f /www/server/mdserver-web/start.py ]; then
         ok "mdserver-web 已安装，跳过"
         return
     fi
@@ -469,11 +469,12 @@ install_mdserver() {
     mkdir -p /tmp/mw-extract /www/server
     cd /tmp/mw-extract
     unzip -q "$zip" || die "mdserver-web 源码解压失败"
-    # 自动识别源码根目录（GitHub archive 目录名可能是 仓库名-分支 / 仓库名-commit / 仓库名，不写死）
+    # 自动识别源码根目录：优先 start.py；其次 scripts/install.sh（面板安装入口）；再兜底任意 .py
     local mw_root
     mw_root="$(find /tmp/mw-extract -maxdepth 2 -name start.py -printf '%h\n' -quit 2>/dev/null)"
+    [ -n "$mw_root" ] || mw_root="$(find /tmp/mw-extract -maxdepth 3 -path '*/scripts/install.sh' -printf '%h\n' -quit 2>/dev/null | sed 's|/scripts$||')"
     [ -n "$mw_root" ] || mw_root="$(find /tmp/mw-extract -maxdepth 2 -name '*.py' -printf '%h\n' -quit 2>/dev/null)"
-    [ -n "$mw_root" ] || die "解压目录识别失败（/tmp/mw-extract 内未找到 start.py）"
+    [ -n "$mw_root" ] || die "解压目录识别失败（/tmp/mw-extract 内未找到源码）"
     # 放置源码：直接 cp -r（比 mv 更稳，兼容跨分区；13M 秒级），成功后清理源
     rm -f /tmp/mw-cp.err
     cp -r "$mw_root" /www/server/mdserver-web 2>/tmp/mw-cp.err || {
@@ -481,8 +482,9 @@ install_mdserver() {
         die "mdserver 源码放置失败（$mw_root → /www/server/mdserver-web）"
     }
     rm -rf "$mw_root"
-    [ -f /www/server/mdserver-web/start.py ] || die "mdserver 源码放置校验失败（缺少 start.py）"
-    ok "mdserver 源码就绪：$(ls /www/server/mdserver-web/start.py)"
+    [ -f /www/server/mdserver-web/scripts/install.sh ] || [ -f /www/server/mdserver-web/start.py ] \
+        || die "mdserver 源码放置校验失败（缺少 scripts/install.sh / start.py）"
+    ok "mdserver 源码就绪：/www/server/mdserver-web"
     info "运行 mdserver-web 安装脚本（自动检测环境，约 5-15 分钟，日志 /tmp/mdserver-install.log）…"
     cd /www/server/mdserver-web
     bash scripts/install.sh > /tmp/mdserver-install.log 2>&1 || die "mdserver-web 安装失败，查看日志：tail -80 /tmp/mdserver-install.log"
@@ -580,7 +582,7 @@ print_summary() {
 }
 
 main() {
-    info "========== ABao 阿宝面板一键安装 v2.6.6（mdserver cp 直放 + 前端 root 删除） =========="
+    info "========== ABao 阿宝面板一键安装 v2.6.7（mdserver 校验放宽到 scripts/install.sh） =========="
     require_root
     detect_os
     check_port "$APP_PORT"
