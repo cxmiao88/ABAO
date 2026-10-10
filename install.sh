@@ -600,6 +600,55 @@ PYEOF
     else
         warn "缺少 panel-src/abao-site-default.html，新建站点将使用默认占位页"
     fi
+    # ---------- ABao 文件删除修复（文件管理删除目录/文件失败） ----------
+    # ① 回收站目录兜底创建 + ② 回收站不可用则真删 + ③ data 参数兼容 [{"name":..}] / [".."]
+    cd /www/server/mdserver-web && ./bin/python3 - <<'PYEOF'
+import re
+p = "/www/server/mdserver-web/web/utils/file.py"
+s = open(p, encoding="utf-8").read()
+n = 0
+# ① mvRecycleBin：回收站目录缺失时兜底创建，仍不可用则返回 False（触发真删）
+old1 = "def mvRecycleBin(path):\n    rb_dir = mw.getRecycleBinDir()\n    try:\n"
+if old1 in s and "os.makedirs(rb_dir, exist_ok=True)" not in s:
+    s = s.replace(old1, "def mvRecycleBin(path):\n    rb_dir = mw.getRecycleBinDir()\n    if not rb_dir:\n        return False\n    try:\n        if not os.path.exists(rb_dir):\n            os.makedirs(rb_dir, exist_ok=True)\n        if not os.path.exists(rb_dir):\n            return False\n    except Exception:\n        return False\n")
+    n += 1
+# ② del 分支：回收站不可用 -> 直接真删（目录 + 文件）
+pat2 = re.compile(r"if is_recycle:\s*mvRecycleBin\(topath\)\s*else:\s*shutil\.rmtree\(filename\)", re.S)
+repl2 = "if is_recycle:\n                        if not mvRecycleBin(topath):\n                            # ABao: 回收站不可用则真删\n                            shutil.rmtree(topath)\n                    else:\n                        shutil.rmtree(filename)"
+s, c = pat2.subn(repl2, s); n += c
+pat2b = re.compile(r"if is_recycle:\s*mvRecycleBin\(topath\)\s*else:\s*os\.remove\(filename\)", re.S)
+repl2b = "if is_recycle:\n                        if not mvRecycleBin(topath):\n                            if os.path.exists(topath):\n                                os.remove(topath)\n                    else:\n                        os.remove(filename)"
+s, c = pat2b.subn(repl2b, s); n += c
+# ③ data 归一化：兼容前端 [{"name":"x"}] 与官方 ["x"]
+pat3 = re.compile(r"if recycle_bin == 'open':\n            is_recycle = True\n        data = json.loads\(data\)\n")
+new3 = "if recycle_bin == 'open':\n            is_recycle = True\n        data = json.loads(data)\n        if data and isinstance(data[0], dict):\n            data = [d.get('name', '') for d in data]\n"
+s, c = pat3.subn(new3, s); n += c
+open(p, "w", encoding="utf-8").write(s)
+print("file-del-patch:", n)
+PYEOF
+    ./bin/python3 -m py_compile /www/server/mdserver-web/web/utils/file.py 2>/dev/null || true
+    # ABao systemd 守护（mdserver 崩溃/重启后自动拉起，等同宝塔守护）
+    cat > /etc/systemd/system/abao-mdserver.service <<'UNIT'
+[Unit]
+Description=ABao mdserver-web backend
+After=network.target
+
+[Service]
+Type=forking
+PIDFile=/www/server/mdserver-web/logs/panel.pid
+ExecStart=/www/server/mdserver-web/scripts/init.d/mw start
+ExecStop=/www/server/mdserver-web/scripts/init.d/mw stop
+Restart=always
+RestartSec=8
+User=root
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+    systemctl daemon-reload >/dev/null 2>&1 && systemctl enable abao-mdserver >/dev/null 2>&1
+    systemctl restart abao-mdserver >/dev/null 2>&1 || /etc/rc.d/init.d/mw restart >/dev/null 2>&1 || true
+    sleep 5
+    ok "文件删除修复补丁 + systemd 守护已生效（mdserver 崩溃自动拉起）"
 }
 
 # ---------- 9b. 安装 Web 服务（openresty，站点访问必需） ----------
@@ -716,7 +765,7 @@ print_summary() {
 }
 
 main() {
-    info "========== ABao 阿宝面板一键安装 v2.6.21（新建站点自动生成高端默认页） =========="
+    info "========== ABao 阿宝面板一键安装 v2.6.22（文件删除修复 + systemd 守护） =========="
     require_root
     detect_os
     enable_ip_forward
