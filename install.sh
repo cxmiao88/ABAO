@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-#  ABao 阿宝面板 - 一键安装脚本 v2.6.0（2026-10-11 更新：自动安装 Web 服务 openresty）
+#  ABao 阿宝面板 - 一键安装脚本 v2.6.1（2026-10-11 更新：CentOS Stream/opencloudos Docker 源版本探测修复）
 #  ---------------------------------------------------------------------------
 #  用法（root 用户执行）：
 #    curl -fsSL https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash
@@ -87,8 +87,12 @@ check_port() {
 install_docker_rhel() {
     local repo=/etc/yum.repos.d/docker-ce.repo relver
     # 显式探测发行版主版本（不能依赖 yum $releasever：OpenCloudOS 展开为 9.4 会导致源 404）
-    if [ "$OS_ID" = "centos" ]; then
+    # 兼容多种包名：centos-release / centos-stream-release / opencloudos-release + os-release VERSION_ID 兜底
+    if [ "$OS_ID" = "centos" ] || [ "$OS_ID" = "rhel" ] || [ "$OS_ID" = "opencloudos" ]; then
         relver="$(rpm -q --qf '%{VERSION}' centos-release 2>/dev/null | cut -d. -f1 | tr -dc '0-9')"
+        [ -n "$relver" ] || relver="$(rpm -q --qf '%{VERSION}' centos-stream-release 2>/dev/null | cut -d. -f1 | tr -dc '0-9')"
+        [ -n "$relver" ] || relver="$(rpm -q --qf '%{VERSION}' opencloudos-release 2>/dev/null | cut -d. -f1 | tr -dc '0-9')"
+        [ -n "$relver" ] || relver="$(echo "${OS_VER}" | cut -d. -f1 | tr -dc '0-9')"
         [ -n "$relver" ] || relver="7"
     else
         relver="9"
@@ -543,7 +547,7 @@ print_summary() {
 }
 
 main() {
-    info "========== ABao 阿宝面板一键安装 v2.6.0（自动安装 Web 服务 openresty） =========="
+    info "========== ABao 阿宝面板一键安装 v2.6.1（CentOS Stream Docker 源修复） =========="
     require_root
     detect_os
     check_port "$APP_PORT"
