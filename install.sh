@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-#  ABao 阿宝面板 - 一键安装脚本 v2.6.19（2026-10-11 更新：ab/AB CLI 完整保留 mdserver 全部命令 1-29+100-202，选项10 显示 ABao 统一面板地址）
+#  ABao 阿宝面板 - 一键安装脚本 v2.6.20（2026-10-11 更新：插件宿主页修复白屏 + 侧边栏可滚动 + CLI 完整菜单）
 #  ---------------------------------------------------------------------------
 #  用法（root 用户执行）：
 #    curl -fsSL https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash
@@ -546,6 +546,15 @@ install_mdserver() {
     else
         warn "mdserver 面板重启后未响应 48700（可稍后 AB 菜单手动处理）"
     fi
+    # 插件宿主页：/static/app/plugin-host.html（补齐 jQuery/layer/插件公共函数，解决前端 iframe 插件配置白屏）
+    if [ -f "$ABAO_DIR/panel-src/plugin-host.html" ]; then
+        mkdir -p /www/server/mdserver-web/web/static/app
+        /bin/cp -f "$ABAO_DIR/panel-src/plugin-host.html" /www/server/mdserver-web/web/static/app/plugin-host.html
+        chmod 644 /www/server/mdserver-web/web/static/app/plugin-host.html
+        ok "插件宿主页已部署（/static/app/plugin-host.html）"
+    else
+        warn "缺少 panel-src/plugin-host.html，插件配置页可能白屏"
+    fi
     # ABao CLI：ab/AB（等同宝塔 bt）——菜单循环保持，处理完自动回菜单，输入 0 或 q 退出
     if [ -f "$ABAO_DIR/panel-src/ab-cli.sh" ]; then
         /bin/cp -f "$ABAO_DIR/panel-src/ab-cli.sh" /usr/local/bin/ab
@@ -672,7 +681,7 @@ print_summary() {
 }
 
 main() {
-    info "========== ABao 阿宝面板一键安装 v2.6.19（CLI 完整命令+选项10显示ABao信息） =========="
+    info "========== ABao 阿宝面板一键安装 v2.6.20（插件宿主页+侧边栏滚动+CLI完整菜单） =========="
     require_root
     detect_os
     enable_ip_forward
