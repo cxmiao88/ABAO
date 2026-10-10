@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-#  ABao 阿宝面板 - 一键安装脚本 v2.5.1（2026-10-10 更新：ab/AB CLI 命令别名，等同宝塔 bt）
+#  ABao 阿宝面板 - 一键安装脚本 v2.5.2（2026-10-10 更新：ab/AB CLI 菜单循环保持，0/q 退出）
 #  ---------------------------------------------------------------------------
 #  用法（root 用户执行）：
 #    curl -fsSL https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash
@@ -449,10 +449,16 @@ install_mdserver() {
     cd /www/server/mdserver-web
     bash scripts/install.sh > /tmp/mdserver-install.log 2>&1 || die "mdserver-web 安装失败，查看日志：tail -80 /tmp/mdserver-install.log"
     ok "mdserver-web 安装完成"
-    # ABao CLI 别名：ab / AB 等同宝塔 bt（指向 mdserver mw 面板命令），大小写均可用
-    ln -sf /etc/rc.d/init.d/mw /usr/local/bin/ab 2>/dev/null || true
-    ln -sf /etc/rc.d/init.d/mw /usr/local/bin/AB 2>/dev/null || true
-    ok "CLI 命令已就绪：ab（阿宝面板命令，等同宝塔 bt；改密码/端口/查信息直接选编号）"
+    # ABao CLI：ab/AB（等同宝塔 bt）——菜单循环保持，处理完自动回菜单，输入 0 或 q 退出
+    if [ -f "$ABAO_DIR/panel-src/ab-cli.sh" ]; then
+        cp "$ABAO_DIR/panel-src/ab-cli.sh" /usr/local/bin/ab
+        cp "$ABAO_DIR/panel-src/ab-cli.sh" /usr/local/bin/AB
+        chmod 755 /usr/local/bin/ab /usr/local/bin/AB
+    else
+        ln -sf /etc/rc.d/init.d/mw /usr/local/bin/ab 2>/dev/null || true
+        ln -sf /etc/rc.d/init.d/mw /usr/local/bin/AB 2>/dev/null || true
+    fi
+    ok "CLI 命令已就绪：ab/AB（阿宝面板命令，等同宝塔 bt；菜单循环，0 或 q 退出）"
 }
 
 # ---------- 10. 输出结果 ----------
@@ -488,7 +494,7 @@ print_summary() {
 }
 
 main() {
-    info "========== ABao 阿宝面板一键安装 v2.5.1（panel-api 二开 + ab CLI + CentOS7 兼容） =========="
+    info "========== ABao 阿宝面板一键安装 v2.5.2（panel-api 二开 + ab CLI 循环 + CentOS7 兼容） =========="
     require_root
     detect_os
     check_port "$APP_PORT"
