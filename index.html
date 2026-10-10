@@ -201,11 +201,12 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;background:var(--bg2
     <p class="sub">一条命令，全自动安装。应用部署、网站、数据库、SSL、文件、监控，像管理宝塔一样简单，同时拥有 Heroku 级应用编排能力。</p>
     <div class="install-box">
       <div class="install-tabs">
-        <button class="itab active" data-cmd="curl -fsSL https://cdn.jsdelivr.net/gh/cxmiao88/ABAO@main/install.sh | bash">🇨🇳 国内镜像（推荐）</button>
+        <button class="itab active" data-cmd="curl -fsSL https://gh-proxy.com/https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash">🇨🇳 国内镜像（推荐）</button>
+        <button class="itab" data-cmd="curl -fsSL https://ghfast.top/https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash">🇨🇳 国内备选</button>
         <button class="itab" data-cmd="curl -fsSL https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash">🌐 海外直连</button>
       </div>
       <div class="install-row">
-        <code id="installCmd">curl -fsSL https://cdn.jsdelivr.net/gh/cxmiao88/ABAO@main/install.sh | bash</code>
+        <code id="installCmd">curl -fsSL https://gh-proxy.com/https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash</code>
         <button class="btn btn-primary copy-btn" id="copyBtn">复制安装命令</button>
       </div>
     </div>
@@ -423,7 +424,7 @@ footer{border-top:1px solid var(--line);padding:44px 0 30px;background:var(--bg2
     <div class="faq">
       <div class="faq-item">
         <button class="faq-q">国内服务器安装很慢或卡住怎么办？<span class="arrow">▾</span></button>
-        <div class="faq-a">用「国内镜像」命令安装（页面顶部复制按钮，走 jsdelivr CDN）。脚本内部也已针对国内网络优化：Docker 走阿里云源、源码与前端下载自动切换到 ghproxy 加速通道、mdserver-web 走 jsdelivr。若某个环节仍超时，脚本会明确提示原因，并可在 120 秒后自动重试。</div>
+        <div class="faq-a">用「国内镜像」命令安装（页面顶部复制按钮，走 gh-proxy.com GitHub 加速通道；若不通可切换「国内备选」ghfast.top）。脚本内部也已针对国内网络优化：Docker 走腾讯云/阿里云源、源码与前端下载自动切换 ghproxy 加速通道、前端包支持源码目录直取/jsdelivr CDN/多源兜底。若某个环节仍超时，脚本会明确提示原因，并在 120 秒后自动重试。</div>
       </div>
       <div class="faq-item">
         <button class="faq-q">ABao 与 Coolify / mdserver-web 是什么关系？<span class="arrow">▾</span></button>
