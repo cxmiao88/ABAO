@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-#  ABao 阿宝面板 - 一键安装脚本 v2.6.18（2026-10-11 更新：ab/AB CLI 自绘菜单，选项10显示 ABao 面板地址 8000+随机码+账号）
+#  ABao 阿宝面板 - 一键安装脚本 v2.6.19（2026-10-11 更新：ab/AB CLI 完整保留 mdserver 全部命令 1-29+100-202，选项10 显示 ABao 统一面板地址）
 #  ---------------------------------------------------------------------------
 #  用法（root 用户执行）：
 #    curl -fsSL https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash
@@ -672,7 +672,7 @@ print_summary() {
 }
 
 main() {
-    info "========== ABao 阿宝面板一键安装 v2.6.18（CLI 查看信息显示8000+随机码） =========="
+    info "========== ABao 阿宝面板一键安装 v2.6.19（CLI 完整命令+选项10显示ABao信息） =========="
     require_root
     detect_os
     enable_ip_forward
