@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-#  ABao 阿宝面板 - 一键安装脚本 v2.6.1（2026-10-11 更新：CentOS Stream/opencloudos Docker 源版本探测修复）
+#  ABao 阿宝面板 - 一键安装脚本 v2.6.2（2026-10-11 更新：前端包三级加速下载）
 #  ---------------------------------------------------------------------------
 #  用法（root 用户执行）：
 #    curl -fsSL https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash
@@ -26,7 +26,10 @@ ABAO_REPO="https://github.com/cxmiao88/ABAO.git"
 ABAO_BRANCH="main"
 ABAO_DIR="/data/coolify/source"          # Coolify/ABao 源码目录
 FRONTEND_ZIP_URL="https://github.com/cxmiao88/ABAO/releases/latest/download/abao-frontend.zip"
+FRONTEND_ZIP_JSD="https://cdn.jsdelivr.net/gh/cxmiao88/ABAO@main/frontend-dist/abao-frontend.zip"
 FRONTEND_ZIP_GH="https://ghproxy.com/https://github.com/cxmiao88/ABAO/releases/latest/download/abao-frontend.zip"
+FRONTEND_ZIP_GH2="https://ghfast.top/https://github.com/cxmiao88/ABAO/releases/latest/download/abao-frontend.zip"
+FRONTEND_ZIP_GH3="https://gh-proxy.com/https://github.com/cxmiao88/ABAO/releases/latest/download/abao-frontend.zip"
 SRC_ZIP_URL="https://github.com/cxmiao88/ABAO/archive/refs/heads/main.zip"
 SRC_ZIP_GH="https://ghfast.top/https://github.com/cxmiao88/ABAO/archive/refs/heads/main.zip"
 APP_PORT="${APP_PORT:-8000}"
@@ -321,12 +324,29 @@ start_coolify() {
 # ---------- 6. 部署前端面板（Release 资产，进度显示 + 国内加速） ----------
 deploy_frontend() {
     local tmp_zip="/tmp/abao-frontend.zip"
-    info "下载 ABao 前端面板（GitHub Release 直连，30 秒超时）…"
-    if ! curl -fSL --progress-bar --max-time 30 "$FRONTEND_ZIP_URL" -o "$tmp_zip" 2>&1; then
-        info "Release 直连不可达，切换 ghproxy 加速通道…"
-        curl -fSL --progress-bar --max-time 600 "$FRONTEND_ZIP_GH" -o "$tmp_zip" 2>&1 \
-            || die "前端面板下载失败（GitHub Release 与加速通道均不可达，请配置代理后重试）"
+    rm -f "$tmp_zip"
+    # ① 源码目录内置前端包（git clone / main.zip 已含 frontend-dist/）→ 零额外下载
+    if [ -f "$ABAO_DIR/frontend-dist/abao-frontend.zip" ]; then
+        cp "$ABAO_DIR/frontend-dist/abao-frontend.zip" "$tmp_zip"
+        ok "前端包取自源码目录（frontend-dist/，免下载）"
     fi
+    # ② jsdelivr 仓库文件加速（国内可达；文件仅 ~1MB）
+    if [ ! -f "$tmp_zip" ]; then
+        info "下载 ABao 前端面板（jsdelivr 仓库文件加速，120 秒超时）…"
+        curl -fSL --progress-bar --max-time 120 "$FRONTEND_ZIP_JSD" -o "$tmp_zip" 2>&1 || rm -f "$tmp_zip"
+    fi
+    # ③ GitHub Release 直连 + 多加速源兜底
+    if [ ! -f "$tmp_zip" ]; then
+        info "下载 ABao 前端面板（GitHub Release 直连，30 秒超时）…"
+        if ! curl -fSL --progress-bar --max-time 30 "$FRONTEND_ZIP_URL" -o "$tmp_zip" 2>&1; then
+            for u in "$FRONTEND_ZIP_GH2" "$FRONTEND_ZIP_GH3" "$FRONTEND_ZIP_GH"; do
+                info "切换加速通道：$u"
+                curl -fSL --progress-bar --max-time 300 "$u" -o "$tmp_zip" 2>&1 && break
+                rm -f "$tmp_zip"
+            done
+        fi
+    fi
+    [ -f "$tmp_zip" ] || die "前端面板下载失败（源码目录/jsdelivr/Release/多加速源均不可达，请配置代理后重试）"
     ok "前端包下载完成（$(du -h "$tmp_zip" | cut -f1)）"
     docker exec coolify rm -rf /var/www/html/public/abao
     rm -rf /tmp/abao-frontend && mkdir -p /tmp/abao-frontend
@@ -547,7 +567,7 @@ print_summary() {
 }
 
 main() {
-    info "========== ABao 阿宝面板一键安装 v2.6.1（CentOS Stream Docker 源修复） =========="
+    info "========== ABao 阿宝面板一键安装 v2.6.2（前端包三级加速：源码目录/jsdelivr/多源） =========="
     require_root
     detect_os
     check_port "$APP_PORT"
