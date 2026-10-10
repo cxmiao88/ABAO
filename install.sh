@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-#  ABao 阿宝面板 - 一键安装脚本 v2.5（2026-10-10 更新：panel-api 二开自动部署 + 停用 firewalld + onboarding 跳过 + PANEL_ADMIN_EMAIL）
+#  ABao 阿宝面板 - 一键安装脚本 v2.5.1（2026-10-10 更新：ab/AB CLI 命令别名，等同宝塔 bt）
 #  ---------------------------------------------------------------------------
 #  用法（root 用户执行）：
 #    curl -fsSL https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash
@@ -449,6 +449,10 @@ install_mdserver() {
     cd /www/server/mdserver-web
     bash scripts/install.sh > /tmp/mdserver-install.log 2>&1 || die "mdserver-web 安装失败，查看日志：tail -80 /tmp/mdserver-install.log"
     ok "mdserver-web 安装完成"
+    # ABao CLI 别名：ab / AB 等同宝塔 bt（指向 mdserver mw 面板命令），大小写均可用
+    ln -sf /etc/rc.d/init.d/mw /usr/local/bin/ab 2>/dev/null || true
+    ln -sf /etc/rc.d/init.d/mw /usr/local/bin/AB 2>/dev/null || true
+    ok "CLI 命令已就绪：ab（阿宝面板命令，等同宝塔 bt；改密码/端口/查信息直接选编号）"
 }
 
 # ---------- 10. 输出结果 ----------
@@ -475,6 +479,8 @@ print_summary() {
     echo "   mdserver 账号: 安装结束时 mdserver 脚本上方输出中的账号/密码（或运行 mw 查看）"
     echo "   自定义账号:    重装时可用环境变量 ABAO_ADMIN_EMAIL / ABAO_ADMIN_PASSWORD 指定"
     echo ""
+    echo "   CLI 命令:      ab 或 AB（等同宝塔 bt，管理面板信息/改密码/改端口等）"
+    echo ""
     echo "   常用命令:   mw                # mdserver 面板 CLI"
     echo "               docker ps         # 查看容器状态"
     echo "               tail -f /tmp/abao-install.log   # 安装日志"
@@ -482,7 +488,7 @@ print_summary() {
 }
 
 main() {
-    info "========== ABao 阿宝面板一键安装 v2.5（panel-api 二开 + CentOS7 兼容 + 幂等重跑） =========="
+    info "========== ABao 阿宝面板一键安装 v2.5.1（panel-api 二开 + ab CLI + CentOS7 兼容） =========="
     require_root
     detect_os
     check_port "$APP_PORT"
