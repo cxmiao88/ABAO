@@ -4,30 +4,58 @@
 <meta charset="utf-8">
 <title>ABao 插件配置</title>
 <script>
-// 主题检测：优先 URL 参数 mode（前端实时传入），否则 localStorage.mw_mode；dark 时注入深色覆盖
+// 主题检测：优先 URL 参数 mode（前端实时传入），否则 localStorage.mw_mode；dark 时强制深色
 (function () {
   var mode = new URLSearchParams(location.search).get('mode') || localStorage.getItem('mw_mode') || 'light';
   if (mode !== 'dark') return;
   document.documentElement.setAttribute('data-mode', 'dark');
+
+  // 方法一：CSS 覆盖（head 注入）
   var s = document.createElement('style');
   s.textContent =
     'body{background:#17181c !important;color:#d8dae0 !important;}' +
     '.bt-warp,.bt-w-main,.bt-w-con,.bt-form,.layui-layer,.layui-layer-content,.layui-layer-page{background:#1e2025 !important;color:#d8dae0 !important;}' +
-    '.bt-label,label,.bt-form label,.bt-w-main h3,.bt-w-main h4{color:#c9cdd6 !important;}' +
+    '.bt-w-menu{background:#17181c !important;color:#d8dae0 !important;}' +
+    '.bt-w-menu p{color:#c9cdd6 !important;background:transparent !important;}' +
+    '.bt-w-menu p.bgw,.bt-w-menu .bgw,.bt-w-menu .active,.bt-w-menu .on{background:#23262c !important;color:#fff !important;}' +
+    '.bt-label,label,.bt-form label{color:#c9cdd6 !important;}' +
     '.bt-input-text-shell,.bt-input-text,input[type=text],input[type=password],input[type=number],input[type=email],select,textarea{background:#23262c !important;border-color:#3a3f47 !important;color:#e8eaee !important;}' +
-    '.bt-checkbox,.bt-radio{background:#23262c !important;border-color:#3a3f47 !important;}' +
-    'table{color:#d8dae0 !important;}' +
     'table th{background:#26292f !important;color:#e8eaee !important;border-color:#343941 !important;}' +
-    'table td{border-color:#343941 !important;background:transparent !important;}' +
-    'table tr:hover td{background:#23262c !important;}' +
-    '.layui-layer-title{background:#26292f !important;color:#e8eaee !important;border-color:#343941 !important;}' +
-    '.layui-layer-btn a{background:#2b2f36 !important;color:#d8dae0 !important;border-color:#3a3f47 !important;}' +
+    'table td{border-color:#343941 !important;}' +
+    '.layui-layer-title{background:#26292f !important;color:#e8eaee !important;}' +
     'a{color:#5ea8ff !important;}' +
-    '.bt-progress,.bt-progress-bar{background:#2b2f36 !important;}' +
     '.bt-logs{background:#111318 !important;color:#c8ccd4 !important;}' +
     'h1,h2,h3,h4,.title{color:#e8eaee !important;}';
   document.head.appendChild(s);
-  // 父窗口切换主题时实时跟随（同域可访问）
+
+  // 方法二：JS 内联样式强制（优先级最高，防 site.css 覆盖）
+  window.__abaoDark = function () {
+    if (document.documentElement.getAttribute('data-mode') !== 'dark') return;
+    function set(el, css) {
+      if (!el) return;
+      Object.keys(css).forEach(function (k) { el.style.setProperty(k, css[k], 'important'); });
+    }
+    set(document.body, { background: '#17181c', color: '#d8dae0' });
+    document.querySelectorAll('.bt-warp,.bt-w-main,.bt-w-con,.bt-form').forEach(function (el) {
+      set(el, { background: '#1e2025', color: '#d8dae0' });
+    });
+    document.querySelectorAll('.bt-w-menu').forEach(function (el) {
+      set(el, { background: '#17181c', color: '#d8dae0', borderColor: '#2b2f36' });
+    });
+    document.querySelectorAll('.bt-w-menu p').forEach(function (el) {
+      set(el, { color: '#c9cdd6', background: 'transparent', borderColor: '#2b2f36', borderRadius: '6px', padding: '10px 16px', margin: '2px 0', cursor: 'pointer', fontSize: '14px' });
+    });
+    document.querySelectorAll('.bt-w-menu p.bgw,.bt-w-menu .bgw,.bt-w-menu .active,.bt-w-menu .on,.bt-w-menu p.on,.bt-w-menu p.active').forEach(function (el) {
+      set(el, { background: '#23262c', color: '#ffffff' });
+    });
+    document.querySelectorAll('input,select,textarea').forEach(function (el) {
+      set(el, { background: '#23262c', borderColor: '#3a3f47', color: '#e8eaee' });
+    });
+  };
+  window.__abaoDark();
+  // 插件 JS 动态渲染后再次强制（菜单/表单可能被重绘）
+  setTimeout(window.__abaoDark, 300);
+  setTimeout(window.__abaoDark, 1200);
   try {
     window.parent.addEventListener('mw-theme-change', function (e) {
       var m = (e.detail && e.detail.mode) || 'dark';
@@ -54,6 +82,7 @@ $(function () {
   }
   $.get('/plugins/setting?name=' + encodeURIComponent(name), function (html) {
     $('#plugin-host').html(html);
+    if (window.__abaoDark) { window.__abaoDark(); setTimeout(window.__abaoDark, 400); }
   }).fail(function () {
     $('#plugin-host').html('<div style="padding:40px;text-align:center;color:#999">插件页加载失败，请确认已登录面板</div>');
   });
