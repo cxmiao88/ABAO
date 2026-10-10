@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-#  ABao 阿宝面板 - 一键安装脚本 v2.6.10（2026-10-11 更新：mdserver 端口48700自动对齐+关安全入口+健康兜底）
+#  ABao 阿宝面板 - 一键安装脚本 v2.6.11（2026-10-11 更新：mdserver 兜底改日志完成标志）
 #  ---------------------------------------------------------------------------
 #  用法（root 用户执行）：
 #    curl -fsSL https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash
@@ -491,9 +491,14 @@ install_mdserver() {
     local mw_pid=$!
     local mw_start=$SECONDS
     local mw_ok=0
-    # 心跳 + 健康检查兜底：面板 API(48700) 可达即视为成功（安装脚本偶发装完仍挂起）
+    # 心跳 + 健康检查兜底：安装日志出现完成标志 或 面板 API(48700) 可达 即视为成功（安装脚本偶发装完仍挂起）
     while kill -0 $mw_pid 2>/dev/null && [ $(( SECONDS - mw_start )) -lt 1800 ]; do
         sleep 45
+        if grep -qE 'Install completed|安装完毕' /tmp/mdserver-install.log 2>/dev/null; then
+            sleep 15   # 留出收尾时间
+            mw_ok=1
+            break
+        fi
         if curl -s -o /dev/null -w '%{http_code}' --connect-timeout 5 http://127.0.0.1:48700/login 2>/dev/null | grep -qE '200|30[0-9]|40[0-9]'; then
             mw_ok=1
             break
@@ -612,7 +617,7 @@ print_summary() {
 }
 
 main() {
-    info "========== ABao 阿宝面板一键安装 v2.6.10（mdserver 端口48700自动对齐+关安全入口+健康兜底） =========="
+    info "========== ABao 阿宝面板一键安装 v2.6.11（mdserver 兜底改日志完成标志） =========="
     require_root
     detect_os
     check_port "$APP_PORT"
