@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-#  ABao 阿宝面板 - 一键安装脚本 v2.6.2（2026-10-11 更新：前端包三级加速下载）
+#  ABao 阿宝面板 - 一键安装脚本 v2.6.3（2026-10-11 更新：mdserver 源码目录自动识别）
 #  ---------------------------------------------------------------------------
 #  用法（root 用户执行）：
 #    curl -fsSL https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash
@@ -469,7 +469,13 @@ install_mdserver() {
     mkdir -p /tmp/mw-extract
     cd /tmp/mw-extract
     unzip -q "$zip" || die "mdserver-web 源码解压失败"
-    mv mdserver-web-dev /www/server/mdserver-web 2>/dev/null || mv mdserver-web-master /www/server/mdserver-web 2>/dev/null || die "解压目录识别失败"
+    # 自动识别源码根目录（GitHub archive 目录名可能是 仓库名-分支 / 仓库名-commit / 仓库名，不写死）
+    local mw_root
+    mw_root="$(find /tmp/mw-extract -maxdepth 2 -name start.py -printf '%h\n' -quit 2>/dev/null)"
+    [ -n "$mw_root" ] || mw_root="$(find /tmp/mw-extract -maxdepth 2 -name '*.py' -printf '%h\n' -quit 2>/dev/null)"
+    [ -n "$mw_root" ] || die "解压目录识别失败（/tmp/mw-extract 内未找到 start.py）"
+    mv "$mw_root" /www/server/mdserver-web 2>/dev/null || { cp -r "$mw_root" /www/server/mdserver-web; }
+    ok "mdserver 源码就绪：$(ls /www/server/mdserver-web/start.py)"
     info "运行 mdserver-web 安装脚本（自动检测环境，约 5-15 分钟，日志 /tmp/mdserver-install.log）…"
     cd /www/server/mdserver-web
     bash scripts/install.sh > /tmp/mdserver-install.log 2>&1 || die "mdserver-web 安装失败，查看日志：tail -80 /tmp/mdserver-install.log"
@@ -567,7 +573,7 @@ print_summary() {
 }
 
 main() {
-    info "========== ABao 阿宝面板一键安装 v2.6.2（前端包三级加速：源码目录/jsdelivr/多源） =========="
+    info "========== ABao 阿宝面板一键安装 v2.6.3（mdserver 源码目录自动识别） =========="
     require_root
     detect_os
     check_port "$APP_PORT"
