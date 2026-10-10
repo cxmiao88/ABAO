@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-#  ABao 阿宝面板 - 一键安装脚本 v2.6.4（2026-10-11 更新：mdserver 放置目录修复 + 失败硬校验）
+#  ABao 阿宝面板 - 一键安装脚本 v2.6.5（2026-10-11 更新：mdserver 放置错误暴露 + 跨分区兜底）
 #  ---------------------------------------------------------------------------
 #  用法（root 用户执行）：
 #    curl -fsSL https://raw.githubusercontent.com/cxmiao88/ABAO/main/install.sh | bash
@@ -474,8 +474,16 @@ install_mdserver() {
     mw_root="$(find /tmp/mw-extract -maxdepth 2 -name start.py -printf '%h\n' -quit 2>/dev/null)"
     [ -n "$mw_root" ] || mw_root="$(find /tmp/mw-extract -maxdepth 2 -name '*.py' -printf '%h\n' -quit 2>/dev/null)"
     [ -n "$mw_root" ] || die "解压目录识别失败（/tmp/mw-extract 内未找到 start.py）"
-    mv "$mw_root" /www/server/mdserver-web 2>/dev/null || cp -r "$mw_root" /www/server/mdserver-web
-    [ -f /www/server/mdserver-web/start.py ] || die "mdserver 源码放置失败（$mw_root → /www/server/mdserver-web）"
+    # 放置源码：优先 mv（同分区原子），失败则 cp+rm 源（跨分区 EXDEV 场景），再失败报详细错误
+    rm -f /tmp/mw-mv.err /tmp/mw-cp.err
+    if ! mv "$mw_root" /www/server/mdserver-web 2>/tmp/mw-mv.err; then
+        cp -r "$mw_root" /www/server/mdserver-web 2>/tmp/mw-cp.err && rm -rf "$mw_root"
+    fi
+    if [ ! -f /www/server/mdserver-web/start.py ]; then
+        err "mv 错误：$(tail -2 /tmp/mw-mv.err 2>/dev/null || true)"
+        err "cp 错误：$(tail -2 /tmp/mw-cp.err 2>/dev/null || true)"
+        die "mdserver 源码放置失败（$mw_root → /www/server/mdserver-web）"
+    fi
     ok "mdserver 源码就绪：$(ls /www/server/mdserver-web/start.py)"
     info "运行 mdserver-web 安装脚本（自动检测环境，约 5-15 分钟，日志 /tmp/mdserver-install.log）…"
     cd /www/server/mdserver-web
@@ -574,7 +582,7 @@ print_summary() {
 }
 
 main() {
-    info "========== ABao 阿宝面板一键安装 v2.6.4（mdserver 放置目录修复 + 失败硬校验） =========="
+    info "========== ABao 阿宝面板一键安装 v2.6.5（mdserver 放置错误暴露 + 跨分区兜底） =========="
     require_root
     detect_os
     check_port "$APP_PORT"
