@@ -565,6 +565,41 @@ install_mdserver() {
         ln -sf /etc/rc.d/init.d/mw /usr/local/bin/AB 2>/dev/null || true
     fi
     ok "CLI 命令已就绪：ab/AB（阿宝面板命令，等同宝塔 bt；菜单循环，0 或 q 退出）"
+    # ABao 高端默认站页面：新建站点自动生成（模板 web/static/abao/site-default.html + site.py 补丁）
+    if [ -f "$ABAO_DIR/panel-src/abao-site-default.html" ]; then
+        mkdir -p /www/server/mdserver-web/web/static/abao
+        /bin/cp -f "$ABAO_DIR/panel-src/abao-site-default.html" /www/server/mdserver-web/web/static/abao/site-default.html
+        chmod 644 /www/server/mdserver-web/web/static/abao/site-default.html
+        # site.py createRootDir 补丁：autoInit 时读模板（替换 {{DOMAIN}}）替代写死 'Work has started!!!'
+        python3 - <<'PYEOF'
+import os
+site_py = "/www/server/mdserver-web/web/utils/site.py"
+src = open(site_py, encoding="utf-8").read()
+old = """        if autoInit:
+            mw.writeFile(path + '/index.html', 'Work has started!!!')
+            mw.execShell('chmod -R 755 ' + path)"""
+new = """        if autoInit:
+            tpl = mw.getServerDir() + '/mdserver-web/web/static/abao/site-default.html'
+            html = 'Work has started!!!'
+            if os.path.exists(tpl):
+                try:
+                    site_name = os.path.basename(path.rstrip('/'))
+                    with open(tpl, encoding='utf-8') as f:
+                        html = f.read().replace('{{DOMAIN}}', site_name)
+                except Exception:
+                    pass
+            mw.writeFile(path + '/index.html', html)
+            mw.execShell('chmod -R 755 ' + path)"""
+if old in src and "site-default.html" not in src:
+    open(site_py, "w", encoding="utf-8").write(src.replace(old, new))
+    print("patched")
+else:
+    print("skip")
+PYEOF
+        ok "ABao 高端默认站页面已部署（新建站点自动生成）"
+    else
+        warn "缺少 panel-src/abao-site-default.html，新建站点将使用默认占位页"
+    fi
 }
 
 # ---------- 9b. 安装 Web 服务（openresty，站点访问必需） ----------
@@ -681,7 +716,7 @@ print_summary() {
 }
 
 main() {
-    info "========== ABao 阿宝面板一键安装 v2.6.20（插件宿主页+侧边栏滚动+CLI完整菜单） =========="
+    info "========== ABao 阿宝面板一键安装 v2.6.21（新建站点自动生成高端默认页） =========="
     require_root
     detect_os
     enable_ip_forward
