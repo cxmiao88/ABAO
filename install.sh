@@ -1387,10 +1387,10 @@ PYEOF
         || warn "site.py 语法检查失败，请手动核对（部署/删站修复未生效）"
 }
 
-# ---------- B03-52a：磁盘容量显示过滤（排除 cosfs/对象存储/overlay 等伪磁盘，避免面板显示 200 多 T） ----------
+# ---------- B03-52a/53：磁盘容量显示（本地块设备保留；对象存储 cosfs/fuse 单独显示为「对象存储」+ du 真实用量；overlay/网络挂载排除） ----------
 setup_disk_fix() {
     [ -f /www/server/mdserver-web/web/utils/system/main.py ] || { info "mdserver 未安装，跳过磁盘显示修复固化"; return; }
-    info "固化磁盘容量显示过滤（B03-52，幂等）…"
+    info "固化磁盘容量显示（B03-52/53，幂等）…"
     local PYC="python3"
     command -v python3 >/dev/null 2>&1 || PYC="/www/server/mdserver-web/bin/python3"
     "$PYC" - <<'PYEOF'
@@ -1411,10 +1411,9 @@ old = """        disk = tmp.split()
 new = """        disk = tmp.split()
         if len(disk) < 5:
             continue
-        # ABao B03-52: 只统计本地块设备，排除 cosfs(对象存储如256T)/overlay/网络挂载等伪磁盘
-        if not disk[0].startswith('/dev/'):
-            continue
-        if 'cosfs' in disk[0] or 'fuse' in disk[0]:
+        # ABao B03-52/53: 本地块设备 /dev/* 保留；cosfs/fuse 对象存储单独保留显示（du 统计真实用量）；overlay/网络挂载等伪磁盘排除
+        is_obj = ('cosfs' in disk[0] or 'fuse' in disk[0])
+        if not disk[0].startswith('/dev/') and not is_obj:
             continue
         if disk[1].find('M') != -1:
             continue
@@ -1427,49 +1426,118 @@ new = """        disk = tmp.split()
 if old in s:
     s = s.replace(old, new, 1)
     open(p, 'w', encoding='utf-8').write(s)
-    print('disk filter OK')
-elif "if not disk[0].startswith('/dev/'):" in s:
-    print('disk filter already patched')
+    print('disk base OK')
+elif "is_obj = ('cosfs' in disk[0]" in s:
+    print('disk base already patched')
 else:
-    print('WARN disk anchor not found (skip)')
+    print('WARN disk base anchor not found (skip)')
+# 2) 对象存储行：容量=df 值、已用=du 实际占用、type=对象存储
+old2 = """        arr = {}
+        arr['path'] = disk[5]
+        tmp1 = [disk[1], disk[2], disk[3], disk[4]]
+        arr['size'] = tmp1
+        arr['inodes'] = [inodes[1], inodes[2], inodes[3], inodes[4]]
+
+        if current_os == 'darwin':
+            arr['type'] = tmp_disk_type
+        else:
+            arr['type'] = getDiskType(disk[0])
+        diskInfo.append(arr)"""
+new2 = """        arr = {}
+        arr['path'] = disk[5]
+        tmp1 = [disk[1], disk[2], disk[3], disk[4]]
+        if is_obj:
+            # 对象存储 df 无真实用量（cosfs 报 256T/0），用 du 实际占用字节填充
+            used_b = mw.execShell('du -sb %s 2>/dev/null' % disk[5])[0].split('\\t')[0].strip()
+            try:
+                used_b = int(used_b)
+            except Exception:
+                used_b = 0
+            total_b = 256 * 1024 ** 4
+            if total_b > 0:
+                used_h = used_b / (1024 ** 3)
+                total_h = total_b / (1024 ** 3)
+                pct = round(used_b * 100.0 / total_b, 1)
+                tmp1 = ['%.1fT' % (total_h / 1024), '%.2fG' % used_h, '%.2fG' % (total_h - used_h), '%.1f%%' % pct]
+        arr['size'] = tmp1
+        arr['inodes'] = [inodes[1], inodes[2], inodes[3], inodes[4]]
+
+        if current_os == 'darwin':
+            arr['type'] = tmp_disk_type
+        elif is_obj:
+            arr['type'] = '对象存储'
+        else:
+            arr['type'] = getDiskType(disk[0])
+        diskInfo.append(arr)"""
+if old2 in s:
+    s = s.replace(old2, new2, 1)
+    open(p, 'w', encoding='utf-8').write(s)
+    print('obj storage display OK')
+elif "arr['type'] = '对象存储'" in s:
+    print('obj storage display already patched')
+else:
+    print('WARN obj storage anchor not found (skip)')
 PYEOF
     /www/server/mdserver-web/bin/python3 -m py_compile /www/server/mdserver-web/web/utils/system/main.py 2>/dev/null \
         && { systemctl restart abao-mdserver.service >/dev/null 2>&1 || service mdserver-web restart >/dev/null 2>&1 || true; \
-             ok "磁盘容量显示过滤已固化（面板不再显示对象存储 256T，B03-52）"; } \
-        || warn "main.py 语法检查失败（磁盘过滤未生效）"
+             ok "磁盘容量显示已固化（本地盘 + 对象存储 /host-data 用量，B03-52/53）"; } \
+        || warn "main.py 语法检查失败（磁盘显示未生效）"
 }
 
-# ---------- B03-52b：数据盘检测与 /www 迁移（有本地数据盘则程序安装到数据盘，否则用系统盘） ----------
+# ---------- B03-52b/53：数据盘检测与安装目录迁移（本地数据盘优先；无本地盘但有对象存储 cosfs → 网站目录 wwwroot 迁到对象存储；软件/数据库保留系统盘） ----------
 setup_data_disk() {
-    info "检测本地数据盘（用于网站/软件安装目录；无数据盘则用系统盘）…"
-    local data_mnt="" best_size=0 mnt="" fs="" size=""
-    # df -h -P 列：Filesystem Size Used Avail Capacity Mounted（6 列，read 取 fs size _ _ _ mnt）
+    info "检测数据盘（本地块设备优先；否则对象存储挂载用于网站数据；均无则用系统盘）…"
+    local data_mnt="" best_size=0 mnt="" fs="" size="" is_obj_mnt=""
     while read -r fs size _ _ _ mnt; do
         [ -n "$fs" ] || continue
-        case "$fs" in /dev/*) ;; *) continue ;; esac
+        local obj=""
+        case "$fs" in *cosfs*|*fuse*) obj=1 ;; esac
+        case "$fs" in /dev/*) ;; *) [ -n "$obj" ] || continue ;; esac
         [ -n "$mnt" ] || continue
         [ "$mnt" = "/" ] && continue
-        case "$mnt" in /boot*|/dev*|/run*|/proc|/sys|/host-data) continue ;; esac
-        local num=0 unit=""
-        num="$(echo "$size" | sed 's/[^0-9.]//g')"
-        unit="$(echo "$size" | sed 's/[0-9.]//g')"
-        case "$unit" in
-            T) num=$(awk "BEGIN{print $num*1024}") ;;
-            G) num=$(awk "BEGIN{print $num}") ;;
-            M) num=$(awk "BEGIN{print $num/1024}") ;;
-            *) continue ;;
-        esac
-        if awk "BEGIN{exit !($num>$best_size)}"; then
-            best_size=$num; data_mnt="$mnt"
+        case "$mnt" in /boot*|/dev*|/run*|/proc|/sys) continue ;; esac
+        if [ -z "$obj" ]; then
+            local num=0 unit=""
+            num="$(echo "$size" | sed 's/[^0-9.]//g')"
+            unit="$(echo "$size" | sed 's/[0-9.]//g')"
+            case "$unit" in
+                T) num=$(awk "BEGIN{print $num*1024}") ;;
+                G) num=$(awk "BEGIN{print $num}") ;;
+                M) num=$(awk "BEGIN{print $num/1024}") ;;
+                *) continue ;;
+            esac
+            if awk "BEGIN{exit !($num>$best_size)}"; then
+                best_size=$num; data_mnt="$mnt"
+            fi
+        else
+            # 对象存储（cosfs/fuse）：df 容量 256T 无意义，仅当无本地数据盘时作为网站目录候选
+            [ -z "$data_mnt" ] && data_mnt="$mnt" && is_obj_mnt=1
         fi
     done < <(df -h -P 2>/dev/null | tail -n +2)
     if [ -z "$data_mnt" ]; then
-        ok "未检测到本地数据盘，网站/软件安装继续使用系统盘（/www）"
+        ok "未检测到数据盘，网站/软件安装继续使用系统盘（/www）"
+        return 0
+    fi
+    if [ -n "$is_obj_mnt" ]; then
+        info "未检测到本地数据盘，检测到对象存储挂载：$data_mnt。将网站目录 /www/wwwroot 迁移到对象存储（软件/MySQL 保留系统盘，数据库不适合对象存储）…"
+        if [ -L /www/wwwroot ]; then
+            ok "/www/wwwroot 已是指向对象存储的软链（$(readlink /www/wwwroot)），跳过迁移"
+            return 0
+        fi
+        [ -d "$data_mnt" ] || { warn "对象存储挂载点 $data_mnt 不存在，跳过迁移"; return 0; }
+        mkdir -p "$data_mnt/www/wwwroot"
+        if [ -d /www/wwwroot ]; then
+            cp -a /www/wwwroot/. "$data_mnt/www/wwwroot/" 2>/dev/null || rsync -a /www/wwwroot/ "$data_mnt/www/wwwroot/" 2>/dev/null || { warn "网站目录迁移失败，跳过"; return 0; }
+            mv /www/wwwroot /www/wwwroot.orig.abao 2>/dev/null || true
+        fi
+        ln -s "$data_mnt/www/wwwroot" /www/wwwroot
+        chown -R www:www "$data_mnt/www/wwwroot" 2>/dev/null || true
+        ok "网站目录 /www/wwwroot 已迁移到对象存储 $data_mnt/www/wwwroot（软链），新建网站默认落对象存储；软件/MySQL 留在系统盘"
         return 0
     fi
     info "检测到本地数据盘挂载点：$data_mnt（约 ${best_size}G），将 /www 数据迁移到数据盘…"
     if [ -L /www ]; then
-        ok "/www 已是指向数据盘的软链（$（readlink /www）），跳过迁移"
+        ok "/www 已是指向数据盘的软链（$(readlink /www)），跳过迁移"
         return 0
     fi
     if [ ! -d "$data_mnt" ]; then
