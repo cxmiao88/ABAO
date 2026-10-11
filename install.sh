@@ -990,31 +990,23 @@ UNIT
     # 缺失 enable-php-0.conf / rewrite 空文件会导致 nginx -t 失败 → 网站访问不了（ERR_CONNECTION_REFUSED）
     mkdir -p /www/server/web_conf/php/conf /www/server/web_conf/nginx/rewrite
     [ -f /www/server/web_conf/php/conf/enable-php-0.conf ] || echo 'set $PHP_ENV 0;' > /www/server/web_conf/php/conf/enable-php-0.conf
-    # ABao nginx systemd 守护（openresty 崩溃/重启后自动拉起）
-    cat > /etc/systemd/system/abao-nginx.service <<'UNIT'
-[Unit]
-Description=ABao OpenResty nginx
-After=network.target
-
-[Service]
-Type=forking
-PIDFile=/www/server/openresty/nginx/logs/nginx.pid
-ExecStart=/www/server/openresty/nginx/sbin/nginx
-ExecReload=/www/server/openresty/nginx/sbin/nginx -s reload
-ExecStop=/www/server/openresty/nginx/sbin/nginx -s quit
-Restart=always
-RestartSec=8
-User=root
-
-[Install]
-WantedBy=multi-user.target
-UNIT
-    systemctl daemon-reload >/dev/null 2>&1 && systemctl enable abao-nginx >/dev/null 2>&1
-    # 仅当 openresty 已装且无 master 时拉起（面板软件商店安装 openresty 后建站即可用）
-    if [ -f /www/server/openresty/nginx/sbin/nginx ] && ! pgrep -f 'nginx: master' >/dev/null 2>&1; then
-        systemctl restart abao-nginx >/dev/null 2>&1 || true
+    # ABao nginx 守护：openresty 统一由 mdserver 原生 init.d 管理（/www/server/openresty/init.d/openresty）。
+    # 注意：切勿创建独立 systemd service——曾与 mdserver 双实例抢端口，导致：
+    #   ① 建站后新配置永远不生效（旧 master 占端口，init.d restart 杀不掉）→ 站点 404；
+    #   ② systemd 每 8 秒尝试 bind 失败，error.log 刷屏（实测 14.5MB）。
+    # 仅注册 init.d 开机自启；openresty 已装且无 master 时用 init.d 拉起（幂等）。
+    if [ -f /www/server/openresty/init.d/openresty ]; then
+        ln -sf /www/server/openresty/init.d/openresty /etc/init.d/openresty
+        chmod +x /etc/init.d/openresty
+        chkconfig --add openresty >/dev/null 2>&1 || true
+        chkconfig openresty on >/dev/null 2>&1 || true
     fi
-    ok "建站占位 conf + nginx systemd 守护已就绪（新建站点访问正常）"
+    rm -f /etc/systemd/system/abao-nginx.service
+    systemctl daemon-reload >/dev/null 2>&1 || true
+    if [ -f /www/server/openresty/nginx/sbin/nginx ] && ! pgrep -f 'openresty -c' >/dev/null 2>&1 && ! pgrep -f 'nginx: master' >/dev/null 2>&1; then
+        /etc/init.d/openresty start >/dev/null 2>&1 || /www/server/openresty/init.d/openresty start >/dev/null 2>&1 || true
+    fi
+    ok "建站占位 conf + nginx 开机自启（mdserver init.d 管理）已就绪（新建站点访问正常）"
 }
 
 # ---------- 9b. 安装 Web 服务（openresty，站点访问必需） ----------
