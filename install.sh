@@ -1144,6 +1144,8 @@ main() {
     setup_openresty_reload
     setup_db_password_sync
     setup_site_deploy_fix
+    setup_disk_fix
+    setup_data_disk
     ensure_backup_dir
     print_summary
     ok "全部完成！如需修改密码：面板「设置」中修改；数据库/Redis 密码见 $ABAO_DIR/.env"
@@ -1297,6 +1299,9 @@ def main():
         cur = json.loads(cur_raw) if cur_raw.strip() else {}
     except Exception:
         cur = {}
+    # ABao B03-52: 兼容历史 []（PHP json_decode('{}',true) 覆盖导致），统一按 dict 处理
+    if not isinstance(cur, dict):
+        cur = {}
     changed = 0
     for db, pwd in found.items():
         if db not in cur:
@@ -1380,6 +1385,107 @@ PYEOF
         && { systemctl restart abao-mdserver.service >/dev/null 2>&1 || service mdserver-web restart >/dev/null 2>&1 || true; \
              ok "站点一键部署/删站修复已固化（B03-51）"; } \
         || warn "site.py 语法检查失败，请手动核对（部署/删站修复未生效）"
+}
+
+# ---------- B03-52a：磁盘容量显示过滤（排除 cosfs/对象存储/overlay 等伪磁盘，避免面板显示 200 多 T） ----------
+setup_disk_fix() {
+    [ -f /www/server/mdserver-web/web/utils/system/main.py ] || { info "mdserver 未安装，跳过磁盘显示修复固化"; return; }
+    info "固化磁盘容量显示过滤（B03-52，幂等）…"
+    local PYC="python3"
+    command -v python3 >/dev/null 2>&1 || PYC="/www/server/mdserver-web/bin/python3"
+    "$PYC" - <<'PYEOF'
+import sys
+p = '/www/server/mdserver-web/web/utils/system/main.py'
+s = open(p, encoding='utf-8').read()
+old = """        disk = tmp.split()
+        if len(disk) < 5:
+            continue
+        if disk[1].find('M') != -1:
+            continue
+        if disk[1].find('K') != -1:
+            continue
+        if len(disk[5].split('/')) > 4:
+            continue
+        if disk[5] in cuts:
+            continue"""
+new = """        disk = tmp.split()
+        if len(disk) < 5:
+            continue
+        # ABao B03-52: 只统计本地块设备，排除 cosfs(对象存储如256T)/overlay/网络挂载等伪磁盘
+        if not disk[0].startswith('/dev/'):
+            continue
+        if 'cosfs' in disk[0] or 'fuse' in disk[0]:
+            continue
+        if disk[1].find('M') != -1:
+            continue
+        if disk[1].find('K') != -1:
+            continue
+        if len(disk[5].split('/')) > 4:
+            continue
+        if disk[5] in cuts:
+            continue"""
+if old in s:
+    s = s.replace(old, new, 1)
+    open(p, 'w', encoding='utf-8').write(s)
+    print('disk filter OK')
+elif "if not disk[0].startswith('/dev/'):" in s:
+    print('disk filter already patched')
+else:
+    print('WARN disk anchor not found (skip)')
+PYEOF
+    /www/server/mdserver-web/bin/python3 -m py_compile /www/server/mdserver-web/web/utils/system/main.py 2>/dev/null \
+        && { systemctl restart abao-mdserver.service >/dev/null 2>&1 || service mdserver-web restart >/dev/null 2>&1 || true; \
+             ok "磁盘容量显示过滤已固化（面板不再显示对象存储 256T，B03-52）"; } \
+        || warn "main.py 语法检查失败（磁盘过滤未生效）"
+}
+
+# ---------- B03-52b：数据盘检测与 /www 迁移（有本地数据盘则程序安装到数据盘，否则用系统盘） ----------
+setup_data_disk() {
+    info "检测本地数据盘（用于网站/软件安装目录；无数据盘则用系统盘）…"
+    local data_mnt="" best_size=0 mnt="" fs="" size=""
+    # df -h -P 列：Filesystem Size Used Avail Capacity Mounted（6 列，read 取 fs size _ _ _ mnt）
+    while read -r fs size _ _ _ mnt; do
+        [ -n "$fs" ] || continue
+        case "$fs" in /dev/*) ;; *) continue ;; esac
+        [ -n "$mnt" ] || continue
+        [ "$mnt" = "/" ] && continue
+        case "$mnt" in /boot*|/dev*|/run*|/proc|/sys|/host-data) continue ;; esac
+        local num=0 unit=""
+        num="$(echo "$size" | sed 's/[^0-9.]//g')"
+        unit="$(echo "$size" | sed 's/[0-9.]//g')"
+        case "$unit" in
+            T) num=$(awk "BEGIN{print $num*1024}") ;;
+            G) num=$(awk "BEGIN{print $num}") ;;
+            M) num=$(awk "BEGIN{print $num/1024}") ;;
+            *) continue ;;
+        esac
+        if awk "BEGIN{exit !($num>$best_size)}"; then
+            best_size=$num; data_mnt="$mnt"
+        fi
+    done < <(df -h -P 2>/dev/null | tail -n +2)
+    if [ -z "$data_mnt" ]; then
+        ok "未检测到本地数据盘，网站/软件安装继续使用系统盘（/www）"
+        return 0
+    fi
+    info "检测到本地数据盘挂载点：$data_mnt（约 ${best_size}G），将 /www 数据迁移到数据盘…"
+    if [ -L /www ]; then
+        ok "/www 已是指向数据盘的软链（$（readlink /www）），跳过迁移"
+        return 0
+    fi
+    if [ ! -d "$data_mnt" ]; then
+        warn "数据盘挂载点 $data_mnt 不存在，跳过迁移（请先挂载磁盘）"
+        return 0
+    fi
+    # 迁移：mkdir + mv（保留原 /www 为空占位 → 软链），mdserver 所有路径（/www/wwwroot 等）不变
+    mkdir -p "$data_mnt/www"
+    if [ -d /www ]; then
+        # 停相关服务再迁移更稳；此处仅拷贝+软链（不破坏运行中进程句柄）
+        cp -a /www/. "$data_mnt/www/" 2>/dev/null || rsync -a /www/ "$data_mnt/www/" 2>/dev/null || { warn "/www 迁移失败，跳过"; return 0; }
+        mv /www /www.orig.abao 2>/dev/null || true
+    fi
+    ln -s "$data_mnt/www" /www
+    chown -R www:www "$data_mnt/www" 2>/dev/null || true
+    ok "/www 已迁移到数据盘 $data_mnt/www（软链），后续网站/软件安装默认落在数据盘"
 }
 
 # ---------- B03-43c：宿主 MySQL 密码注入（面板数据库管理直连用） ----------
