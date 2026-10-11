@@ -1140,9 +1140,56 @@ main() {
     open_firewall
     install_mdserver
     inject_mysql_pwd
+    setup_phpmyadmin_signon
     ensure_backup_dir
     print_summary
     ok "全部完成！如需修改密码：面板「设置」中修改；数据库/Redis 密码见 $ABAO_DIR/.env"
+}
+
+# ---------- B03-49：phpMyAdmin signon 单点登录（数据库只能管理自己账号下的库） ----------
+setup_phpmyadmin_signon() {
+    local pma="/www/server/phpmyadmin/phpmyadmin_sjqemi"
+    [ -d "$pma" ] || { info "phpMyAdmin 尚未安装（软件商店安装后重跑本段即可），跳过 signon 固化"; return; }
+    info "固化 phpMyAdmin signon 隔离管理（B03-49，幂等）…"
+    # 1) signon 跳板（面板「管理」→ signon.php → 容器 resolve → 专属账号会话）
+    cp "$ABAO_DIR/panel-src/signon.php" "$pma/signon.php"
+    chown www:www "$pma/signon.php" 2>/dev/null || true
+    # 2) config.inc.php → auth_type=signon（幂等；移除 config 免密残留）
+    local PYC="python3"
+    command -v python3 >/dev/null 2>&1 || PYC="/www/server/mdserver-web/bin/python3"
+    "$PYC" - <<'PYEOF'
+import re, sys
+p = '/www/server/phpmyadmin/phpmyadmin_sjqemi/config.inc.php'
+s = open(p).read()
+if "auth_type'] = 'signon'" in s:
+    print('config.inc.php already signon')
+    sys.exit(0)
+s = re.sub(r"\$cfg\['Servers'\]\[\$i\]\['auth_type'\]\s*=\s*'config';",
+           "$cfg['Servers'][$i]['auth_type'] = 'signon';", s)
+s = re.sub(r"\n?\s*\$cfg\['Servers'\]\[\$i\]\['user'\]\s*=.*\n?", "\n", s)
+s = re.sub(r"\n?\s*\$cfg\['Servers'\]\[\$i\]\['password'\]\s*=.*\n?", "\n", s)
+if 'SignonSession' not in s:
+    s = s.replace("$cfg['Servers'][$i]['auth_type'] = 'signon';",
+                  "$cfg['Servers'][$i]['auth_type'] = 'signon';\n$cfg['Servers'][$i]['SignonSession'] = 'SignonSession';\n$cfg['Servers'][$i]['SignonURL'] = '/phpmyadmin/signon.php';")
+open(p, 'w').write(s)
+print('config.inc.php -> signon OK')
+PYEOF
+    # 3) 888 站点走 PHP 82 执行链（phpMyAdmin 是 PHP 程序，需 fastcgi 转发）
+    if ! grep -q 'enable-php-82' /www/server/web_conf/nginx/vhost/phpmyadmin.conf 2>/dev/null; then
+        sed -i 's|enable-php-0.conf|enable-php-82.conf|' /www/server/web_conf/nginx/vhost/phpmyadmin.conf 2>/dev/null || true
+    fi
+    [ -f /www/server/web_conf/php/conf/enable-php-82.conf ] || cat > /www/server/web_conf/php/conf/enable-php-82.conf <<'EOF'
+location ~ [^/]\.php(/|$)
+{
+    try_files $uri =404;
+    fastcgi_pass unix:/var/opt/remi/php82/run/php-fpm/www.sock;
+    fastcgi_index index.php;
+    include /www/server/openresty/nginx/conf/fastcgi_params;
+    include /www/server/web_conf/php/pathinfo.conf;
+}
+EOF
+    /www/server/openresty/nginx/sbin/nginx -t >/dev/null 2>&1 && /www/server/openresty/nginx/sbin/nginx -s reload >/dev/null 2>&1 || true
+    ok "phpMyAdmin signon 已固化（仅能管理自己账号下的库）"
 }
 # ---------- B03-43c：宿主 MySQL 密码注入（面板数据库管理直连用） ----------
 inject_mysql_pwd() {
