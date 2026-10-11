@@ -704,6 +704,168 @@ PYEOF2
     else
         warn "缺少 panel-src/abao-site-default.html，新建站点将使用默认占位页"
     fi
+    # ---------- ABao 一键部署网站程序（像宝塔一样：WordPress/Typecho/Z-BlogPHP/Nextcloud） ----------
+    # 后端在 web/admin/site/site.py 追加 /site/deploy_list + /site/deploy_install（幂等：已含标记则跳过）
+    if grep -q 'ABao 一键部署网站程序' /www/server/mdserver-web/web/admin/site/site.py; then
+        ok "一键部署网站程序 patch 已存在，跳过"
+    else
+        cp /www/server/mdserver-web/web/admin/site/site.py /www/server/mdserver-web/web/admin/site/site.py.bak-deploy 2>/dev/null || true
+        cat > /tmp/abao-deploy-append.py <<'DEPLOYEOF'
+import re
+import sqlite3 as _abao_sqlite3
+import secrets as _abao_secrets
+import shutil as _abao_shutil
+
+ABAO_PROGRAMS = [
+    {'key': 'wordpress', 'name': 'WordPress', 'version': '7.x',
+     'desc': '全球最流行的开源博客与内容管理系统（CMS）', 'type': 'php', 'need_db': True,
+     'url': 'https://cn.wordpress.org/latest-zh_CN.zip', 'home': 'https://cn.wordpress.org/'},
+    {'key': 'typecho', 'name': 'Typecho', 'version': '1.2+',
+     'desc': '轻量、优雅的开源博客程序', 'type': 'php', 'need_db': True,
+     'url': 'https://gh-proxy.com/https://github.com/typecho/typecho/releases/latest/download/typecho.zip', 'home': 'https://typecho.org/'},
+    {'key': 'zblogphp', 'name': 'Z-BlogPHP', 'version': '1.8',
+     'desc': '小巧强大的 PHP 博客程序，支持插件与主题', 'type': 'php', 'need_db': True,
+     'url': 'https://gh-proxy.com/https://github.com/zblogcn/zblogphp/releases/download/v1.8.0.4020/zblogphp-1.8.0.4020.zip', 'home': 'https://www.zblogcn.com/'},
+    {'key': 'nextcloud', 'name': 'Nextcloud', 'version': '35.x',
+     'desc': '自托管云盘与协作平台（约 295MB，安装较慢）', 'type': 'php', 'need_db': True,
+     'url': 'https://download.nextcloud.com/server/releases/latest.zip', 'home': 'https://nextcloud.com/'},
+]
+
+def _abao_get_mysql_root():
+    try:
+        conn = _abao_sqlite3.connect('/www/server/mysql-community/mysql.db')
+        row = conn.execute('select * from config where id=1').fetchone()
+        conn.close()
+        if row:
+            return row[1]
+    except Exception:
+        pass
+    return ''
+
+def _abao_create_database(db_name, db_user, db_pwd):
+    if not re.match(r'^[a-zA-Z0-9_]+$', db_name) or not re.match(r'^[a-zA-Z0-9_]+$', db_user):
+        return '数据库名/用户名只能包含字母、数字、下划线'
+    if len(db_pwd) < 8 or len(db_pwd) > 32:
+        return '数据库密码长度需为 8-32 位'
+    root_pwd = _abao_get_mysql_root()
+    if not root_pwd:
+        return '无法读取 MySQL root 密码，数据库创建失败'
+    sock = '/www/server/mysql-community/mysql.sock'
+    mysql = '/www/server/mysql-community/bin/mysql'
+    sql = ("CREATE DATABASE IF NOT EXISTS {db} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+           "CREATE USER IF NOT EXISTS '{u}'@'localhost' IDENTIFIED BY '{p}';"
+           "CREATE USER IF NOT EXISTS '{u}'@'127.0.0.1' IDENTIFIED BY '{p}';"
+           "GRANT ALL PRIVILEGES ON {db}.* TO '{u}'@'localhost';"
+           "GRANT ALL PRIVILEGES ON {db}.* TO '{u}'@'127.0.0.1';"
+           "FLUSH PRIVILEGES;").format(db=db_name, u=db_user, p=db_pwd)
+    cmd = mysql + " -uroot -p'" + root_pwd + "' -S " + sock + ' -e "' + sql + '"'
+    ret = mw.execShell(cmd)
+    if 'ERROR' in (ret[0] + ret[1]):
+        return '数据库创建失败: ' + (ret[1] or ret[0])[:200]
+    return ''
+
+def _abao_download_extract(url, key, target_dir):
+    tmp_dir = '/www/tmp/abao-deploy'
+    try:
+        os.makedirs(tmp_dir, exist_ok=True)
+    except Exception:
+        tmp_dir = '/tmp/abao-deploy'
+        os.makedirs(tmp_dir, exist_ok=True)
+    zipf = tmp_dir + '/' + key + '.zip'
+    mw.execShell('curl -sL --connect-timeout 15 -m 600 -o ' + zipf + ' "' + url + '"')
+    if not os.path.exists(zipf) or os.path.getsize(zipf) < 1000:
+        return False, '下载源码失败（请检查网络或稍后重试）'
+    ex_dir = tmp_dir + '/' + key
+    _abao_shutil.rmtree(ex_dir, ignore_errors=True)
+    os.makedirs(ex_dir, exist_ok=True)
+    ret = mw.execShell('unzip -q -o ' + zipf + ' -d ' + ex_dir)
+    if ret[0] != '' and 'error' in ret[0].lower() and 'warning' not in ret[0].lower():
+        return False, '解压源码失败: ' + ret[0][:200]
+    src = ex_dir
+    items = [i for i in os.listdir(ex_dir) if not i.startswith('__MACOSX')]
+    if len(items) == 1 and os.path.isdir(ex_dir + '/' + items[0]):
+        src = ex_dir + '/' + items[0]
+    try:
+        os.remove(target_dir + '/index.html')
+    except Exception:
+        pass
+    mw.execShell('cp -rf ' + src + '/* ' + target_dir + '/')
+    mw.execShell('cp -rf ' + src + '/.[!.]* ' + target_dir + '/ 2>/dev/null; true')
+    try:
+        os.remove(zipf)
+        _abao_shutil.rmtree(ex_dir, ignore_errors=True)
+    except Exception:
+        pass
+    return True, ''
+
+def _abao_write_wp_config(target_dir, db_name, db_user, db_pwd):
+    sample = target_dir + '/wp-config-sample.php'
+    if not os.path.exists(sample):
+        return False
+    content = mw.readFile(sample)
+    content = re.sub(r"define\s*\(\s*'DB_NAME',\s*'[^']*'", "define('DB_NAME', '" + db_name + "'", content)
+    content = re.sub(r"define\s*\(\s*'DB_USER',\s*'[^']*'", "define('DB_USER', '" + db_user + "'", content)
+    content = re.sub(r"define\s*\(\s*'DB_PASSWORD',\s*'[^']*'", "define('DB_PASSWORD', '" + db_pwd + "'", content)
+    content = re.sub(r"define\s*\(\s*'DB_HOST',\s*'[^']*'", "define('DB_HOST', '127.0.0.1:33206'", content)
+    for salt in ['AUTH_KEY', 'SECURE_AUTH_KEY', 'LOGGED_IN_KEY', 'NONCE_KEY',
+                 'AUTH_SALT', 'SECURE_AUTH_SALT', 'LOGGED_IN_SALT', 'NONCE_SALT']:
+        content = re.sub(r"define\s*\(\s*'" + salt + r"',\s*'[^']*'",
+                         "define('" + salt + "', '" + _abao_secrets.token_hex(32) + "'", content)
+    mw.writeFile(target_dir + '/wp-config.php', content)
+    return True
+
+@blueprint.route('/deploy_list', endpoint='deploy_list', methods=['GET', 'POST'])
+@panel_login_required
+def deploy_list():
+    data = []
+    for p in ABAO_PROGRAMS:
+        data.append({'key': p['key'], 'name': p['name'], 'version': p['version'],
+                     'desc': p['desc'], 'type': p['type'], 'need_db': p['need_db'], 'home': p['home']})
+    return mw.returnData(True, 'OK', data)
+
+@blueprint.route('/deploy_install', endpoint='deploy_install', methods=['POST'])
+@panel_login_required
+def deploy_install():
+    site_name = request.form.get('siteName', '')
+    program = request.form.get('program', '')
+    db_name = request.form.get('dbName', '')
+    db_user = request.form.get('dbUser', '')
+    db_pwd = request.form.get('dbPwd', '')
+    if not site_name or not program:
+        return mw.returnData(False, '参数缺失')
+    prog = None
+    for p in ABAO_PROGRAMS:
+        if p['key'] == program:
+            prog = p
+            break
+    if not prog:
+        return mw.returnData(False, '不支持的程序: ' + program)
+    root_dir = '/www/wwwroot/' + site_name
+    if not os.path.isdir(root_dir):
+        return mw.returnData(False, '站点目录不存在，请先创建站点')
+    if prog['need_db']:
+        if not db_name or not db_user or not db_pwd:
+            return mw.returnData(False, prog['name'] + ' 需要数据库，请填写数据库名/账号/密码')
+        err = _abao_create_database(db_name, db_user, db_pwd)
+        if err:
+            return mw.returnData(False, err)
+    ok, msg = _abao_download_extract(prog['url'], prog['key'], root_dir)
+    if not ok:
+        return mw.returnData(False, msg)
+    wp_hint = ''
+    if prog['key'] == 'wordpress':
+        if _abao_write_wp_config(root_dir, db_name, db_user, db_pwd):
+            wp_hint = '（已自动写入数据库配置）'
+    mw.execShell('chown -R www:www ' + root_dir + ' 2>/dev/null; chmod -R 755 ' + root_dir + ' 2>/dev/null; true')
+    mw.writeLog('网站管理', '一键部署 {1} 到站点 {0}'.format(site_name, prog['name']))
+    return mw.returnData(True, prog['name'] + ' 部署完成' + wp_hint + '，请访问站点完成安装向导', {'program': prog['name']})
+DEPLOYEOF
+        cat /tmp/abao-deploy-append.py >> /www/server/mdserver-web/web/admin/site/site.py
+        rm -f /tmp/abao-deploy-append.py
+        /www/server/mdserver-web/bin/python3 -m py_compile /www/server/mdserver-web/web/admin/site/site.py 2>/dev/null \
+            && ok "一键部署网站程序已固化（WordPress/Typecho/Z-BlogPHP/Nextcloud）" \
+            || warn "一键部署网站程序 patch 语法检查失败"
+    fi
     # ---------- ABao 文件删除修复（文件管理删除目录/文件失败） ----------
     # ① 回收站目录兜底创建 + ② 回收站不可用则真删 + ③ data 参数兼容 [{"name":..}] / [".."]
     cd /www/server/mdserver-web && ./bin/python3 - <<'PYEOF'
