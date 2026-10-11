@@ -680,7 +680,27 @@ if old in src and "site-default.html" not in src:
 else:
     print("skip")
 PYEOF
-        ok "ABao 高端默认站页面已部署（新建站点自动生成）"
+        # 增强：目录已存在但缺 index.html 时也补写默认页（避免空目录 403，幂等）
+        /www/server/mdserver-web/bin/python3 - <<'PYEOF2'
+p = "/www/server/mdserver-web/web/utils/site.py"
+s = open(p, encoding="utf-8").read()
+if "ABao: 空目录自动补默认页" in s:
+    print("skip-createdir-enh")
+else:
+    old = "    def createRootDir(self, path):\n        autoInit = False\n        if not os.path.exists(path):\n            autoInit = True\n            os.makedirs(path)\n        if not mw.isAppleSystem():\n"
+    new = "    def createRootDir(self, path):\n        autoInit = False\n        if not os.path.exists(path):\n            autoInit = True\n            os.makedirs(path)\n        # ABao: 空目录自动补默认页（目录存在但缺 index.html 也补写，避免 403）\n        if not os.path.exists(path + '/index.html'):\n            autoInit = True\n        if not mw.isAppleSystem():\n"
+    if old in s:
+        s = s.replace(old, new, 1)
+        open(p, "w", encoding="utf-8").write(s)
+        print("patched-createdir-enh")
+    else:
+        print("anchor-not-found")
+PYEOF2
+        # 反向代理切换支持：补 enable-php-000.conf（内容同 00，仅 PHP_ENV=0 不解析 PHP）
+        if [ -f /www/server/web_conf/php/conf/enable-php-00.conf ] && [ ! -f /www/server/web_conf/php/conf/enable-php-000.conf ]; then
+            cp /www/server/web_conf/php/conf/enable-php-00.conf /www/server/web_conf/php/conf/enable-php-000.conf
+        fi
+        ok "ABao 高端默认站页面已部署（新建站点自动生成 + 空目录自动补页 + 反向代理 PHP conf）"
     else
         warn "缺少 panel-src/abao-site-default.html，新建站点将使用默认占位页"
     fi
