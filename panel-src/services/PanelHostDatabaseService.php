@@ -28,6 +28,41 @@ class PanelHostDatabaseService
         return storage_path('app/backups/database');
     }
 
+    /** 面板侧记录的库密码文件（容器 storage/app/panel ↔ 宿主 /data/coolify/panel，持久卷；仅本机明文，不上 GitHub） */
+    private function pwdFile(): string
+    {
+        return storage_path('app/panel/host-db-passwords.json');
+    }
+
+    /** 读取面板记录的库→密码映射 */
+    private function loadPasswords(): array
+    {
+        $f = $this->pwdFile();
+        if (! is_file($f)) {
+            return [];
+        }
+        $data = json_decode((string) file_get_contents($f), true);
+        if (! is_array($data)) {
+            return [];
+        }
+
+        return $data;
+    }
+
+    /** 写入面板记录的库→密码映射（原子写） */
+    private function savePasswords(array $map): void
+    {
+        $f = $this->pwdFile();
+        $dir = dirname($f);
+        if (! is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+        $tmp = $f.'.tmp';
+        file_put_contents($tmp, json_encode($map, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+        @chmod($tmp, 0600);
+        rename($tmp, $f);
+    }
+
     private function pdo(): \PDO
     {
         $host = config('panel-api.mysql_host', 'host.docker.internal');
@@ -78,6 +113,8 @@ class PanelHostDatabaseService
                 'collation' => $r['collation'],
                 'size' => $size,
                 'tables' => $tables,
+                // 面板记录的明文密码（仅通过面板创建/改密过的库有值；历史遗留库无记录显示未记录）
+                'pwd' => $this->loadPasswords()[$name] ?? '',
             ];
         }
 
@@ -97,6 +134,10 @@ class PanelHostDatabaseService
             $pdo->exec("CREATE USER IF NOT EXISTS '{$user}'@'%' IDENTIFIED BY ".$pdo->quote($pwd));
             $pdo->exec("GRANT ALL PRIVILEGES ON `{$db}`.* TO '{$user}'@'%'");
             $pdo->exec('FLUSH PRIVILEGES');
+            // B03-48：面板记录明文密码（仅本机持久卷，供密码列显示/复制）
+            $map = $this->loadPasswords();
+            $map[$db] = $pwd;
+            $this->savePasswords($map);
         }
     }
 
@@ -113,6 +154,12 @@ class PanelHostDatabaseService
         } catch (\Throwable $e) {
             Log::warning("panel-api host db drop user {$db} failed: {$e->getMessage()}");
         }
+        // B03-48：删库后清除面板密码记录
+        $map = $this->loadPasswords();
+        if (isset($map[$db])) {
+            unset($map[$db]);
+            $this->savePasswords($map);
+        }
     }
 
     /** 改库专属用户密码 */
@@ -126,6 +173,10 @@ class PanelHostDatabaseService
         $pdo = $this->pdo();
         $pdo->exec("ALTER USER '{$user}'@'%' IDENTIFIED BY ".$pdo->quote($pwd));
         $pdo->exec('FLUSH PRIVILEGES');
+        // B03-48：改密后同步面板记录
+        $map = $this->loadPasswords();
+        $map[$db] = $pwd;
+        $this->savePasswords($map);
     }
 
     /** MySQL 用户列表（排除系统内置账户） */
