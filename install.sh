@@ -866,6 +866,77 @@ DEPLOYEOF
             && ok "一键部署网站程序已固化（WordPress/Typecho/Z-BlogPHP/Nextcloud）" \
             || warn "一键部署网站程序 patch 语法检查失败"
     fi
+    # ---------- ABao 自定义站点名 + 短目录删除修复（B03-45） ----------
+    # ① site/add 支持可选 name（站点显示名/conf 名/目录默认名，不强制用域名）
+    # ② 自定义名时主域名自动并入域名列表（nginx server_name 保证可访问）
+    # ③ domainlist 缺失防御（官方 KeyError）
+    # ④ delete 按 sites.path 删除目录（站点名 != 目录名时也能删干净）
+    cd /www/server/mdserver-web && ./bin/python3 - <<'SITENAME'
+import re
+n = 0
+# ① admin/site.py add 读 name
+pa = "/www/server/mdserver-web/web/admin/site/site.py"
+s = open(pa, encoding="utf-8").read()
+old_a = """    php_version = request.form.get('php_version', '')
+    return MwSites.instance().add(webinfo, port, ps, path, version, php_version)"""
+new_a = """    php_version = request.form.get('php_version', '')
+    # ABao: 自定义站点名（可选，不填则用域名）
+    name = request.form.get('name', '')
+    return MwSites.instance().add(webinfo, port, ps, path, version, php_version, name)"""
+if "ABao: 自定义站点名" not in s and old_a in s:
+    s = s.replace(old_a, new_a, 1)
+    open(pa, "w", encoding="utf-8").write(s); n += 1
+# ② utils/site.py add 签名 + 自定义名逻辑
+pu = "/www/server/mdserver-web/web/utils/site.py"
+s = open(pu, encoding="utf-8").read()
+old_sig = "def add(self, site_info, port, ps, path, version, php_version=''):"
+new_sig = "def add(self, site_info, port, ps, path, version, php_version='', name=''):"
+if old_sig in s and new_sig not in s:
+    s = s.replace(old_sig, new_sig, 1); n += 1
+old_name = """        site_info = json.loads(site_info)
+
+        self.siteName = self.toPunycode(site_info['domain'].strip().split(':')[0]).strip()
+        self.sitePath = self.toPunycodePath(self.getPath(path.replace(' ', '')))"""
+new_name = """        site_info = json.loads(site_info)
+
+        # ABao: 自定义站点名（可选；仅字母数字._-，非法回退域名）；自定义名时主域名并入域名列表保证 server_name 可访问
+        custom_name = name.strip() if name and re.match(r'^[a-zA-Z0-9][a-zA-Z0-9._-]*$', name.strip()) else ''
+        main_domain = site_info['domain'].strip().split(':')[0]
+        if custom_name:
+            self.siteName = self.toPunycode(custom_name).strip()
+            if main_domain not in [d.strip().split(':')[0] for d in site_info.get('domainlist', [])]:
+                site_info['domainlist'] = site_info.get('domainlist', []) + [main_domain]
+        else:
+            self.siteName = self.toPunycode(main_domain).strip()
+        self.sitePath = self.toPunycodePath(self.getPath(path.replace(' ', '')))"""
+if "ABao: 自定义站点名" not in s and old_name in s:
+    s = s.replace(old_name, new_name, 1); n += 1
+# ③ domainlist 缺失防御
+old_dl = """        # 添加更多域名
+        for domain in site_info['domainlist']:"""
+new_dl = """        # 添加更多域名
+        for domain in site_info.get('domainlist', []):"""
+if old_dl in s and "ABao: domainlist 防御" not in s:
+    s = s.replace(old_dl, new_dl, 1)
+    s = s.replace(new_dl, "# ABao: domainlist 防御\n" + new_dl, 1); n += 1
+# ④ delete 按 sites.path 删除自定义目录
+old_del = """        if path == '1':
+            web_root_path = mw.getWwwDir() + '/' + webname
+            mw.execShell('rm -rf ' + web_root_path)"""
+new_del = """        if path == '1':
+            # ABao: 自定义目录站点按 sites.path 删除（站点名可能不等于目录名）
+            web_root_path = info['path'] if info.get('path', '').startswith('/') else (mw.getWwwDir() + '/' + webname)
+            if web_root_path and web_root_path != mw.getWwwDir():
+                mw.execShell('rm -rf ' + web_root_path)"""
+if old_del in s and "ABao: 自定义目录站点按 sites.path" not in s:
+    s = s.replace(old_del, new_del, 1); n += 1
+open(pu, "w", encoding="utf-8").write(s)
+print("site-name-patch:", n)
+SITENAME
+    cd /www/server/mdserver-web && ./bin/python3 -m py_compile web/admin/site/site.py web/utils/site.py 2>/dev/null \
+        && systemctl restart abao-mdserver >/dev/null 2>&1 || /etc/rc.d/init.d/mw restart >/dev/null 2>&1 || true \
+        && ok "自定义站点名 + 短目录删除修复已固化（B03-45：站点名可选、根目录只填末级、删除按真实目录）" \
+        || warn "自定义站点名 patch 语法检查失败"
     # ---------- ABao 文件删除修复（文件管理删除目录/文件失败） ----------
     # ① 回收站目录兜底创建 + ② 回收站不可用则真删 + ③ data 参数兼容 [{"name":..}] / [".."]
     cd /www/server/mdserver-web && ./bin/python3 - <<'PYEOF'
