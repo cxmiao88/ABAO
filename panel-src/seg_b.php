@@ -40,6 +40,8 @@
         Route::post('/host/databases', [\App\Http\Controllers\Panel\PanelApiController::class, 'createHostDatabase'])->name('host-databases.create');
         Route::post('/host/databases/{name}/drop', [\App\Http\Controllers\Panel\PanelApiController::class, 'dropHostDatabase'])->where('name', '[a-zA-Z0-9_]+')->name('host-databases.drop');
         Route::post('/host/databases/{name}/password', [\App\Http\Controllers\Panel\PanelApiController::class, 'changeHostDatabasePassword'])->where('name', '[a-zA-Z0-9_]+')->name('host-databases.password');
+        // B03-49：phpMyAdmin signon 一次性令牌（只能管理自己账号下的库）
+        Route::get('/host/databases/{name}/pma-token', [\App\Http\Controllers\Panel\PanelApiController::class, 'hostDatabasePmaToken'])->where('name', '[a-zA-Z0-9_]+')->name('host-databases.pma-token');
         // B03-43d：宿主 MySQL 备份/恢复/账号/下载（面板页内闭环）
         Route::get('/host/dbusers', [\App\Http\Controllers\Panel\PanelApiController::class, 'hostDbUsers'])->name('host-dbusers');
         Route::post('/host/databases/{name}/backup', [\App\Http\Controllers\Panel\PanelApiController::class, 'backupHostDatabase'])->where('name', '[a-zA-Z0-9_]+')->name('host-databases.backup');
