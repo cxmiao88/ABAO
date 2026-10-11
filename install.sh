@@ -1141,6 +1141,8 @@ main() {
     install_mdserver
     inject_mysql_pwd
     setup_phpmyadmin_signon
+    setup_openresty_reload
+    setup_db_password_sync
     ensure_backup_dir
     print_summary
     ok "全部完成！如需修改密码：面板「设置」中修改；数据库/Redis 密码见 $ABAO_DIR/.env"
@@ -1191,6 +1193,137 @@ EOF
     /www/server/openresty/nginx/sbin/nginx -t >/dev/null 2>&1 && /www/server/openresty/nginx/sbin/nginx -s reload >/dev/null 2>&1 || true
     ok "phpMyAdmin signon 已固化（仅能管理自己账号下的库）"
 }
+# ---------- B03-50a：openresty pid 文件修复（建站后新 vhost 立即生效，否则 808 等端口站 404） ----------
+setup_openresty_reload() {
+    local ng="/www/server/openresty/nginx"
+    [ -f "$ng/sbin/nginx" ] || { info "openresty 尚未安装（软件商店安装后重跑本段即可），跳过 reload 固化"; return; }
+    info "固化 openresty reload 链路（B03-50，幂等）…"
+    # logs/nginx.pid 为空会导致 mdserver 建站后的 `nginx -s reload` 报 invalid PID 静默失败，
+    # 新 vhost 永远不加载（表现为按端口访问 404、access/error 日志全空）。
+    local master_pid
+    master_pid="$(pgrep -f '/www/server/openresty/bin/openresty -c' | head -1)"
+    if [ -n "$master_pid" ]; then
+        echo "$master_pid" > "$ng/logs/nginx.pid"
+    fi
+    if [ -s "$ng/logs/nginx.pid" ]; then
+        "$ng/sbin/nginx" -t >/dev/null 2>&1 && "$ng/sbin/nginx" -s reload >/dev/null 2>&1 \
+            && ok "openresty pid 已修正并重载（建站 vhost 即时生效）" \
+            || warn "openresty reload 失败，请手动检查 $ng/logs/nginx.pid"
+    else
+        warn "未找到 openresty master 进程，跳过（openresty 未运行）"
+    fi
+}
+
+# ---------- B03-50b：一键部署建库密码同步（WP/Typecho/Nextcloud/Z-Blog 配置 → 面板记录文件） ----------
+setup_db_password_sync() {
+    [ -d /www/server/mdserver-web/scripts ] || { info "mdserver 未安装，跳过密码同步固化"; return; }
+    info "固化一键部署数据库密码同步（B03-50，幂等）…"
+    cat > /www/server/mdserver-web/scripts/abao_dbsync.py <<'ABAODBSYNC'
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""ABao dbsync：扫描站点 CMS 配置，把一键部署建库密码同步进面板记录文件（幂等，不覆盖已有记录）
+覆盖：WordPress wp-config.php / Typecho config.inc.php / Nextcloud config/config.php / Z-Blog zb_users/c_option.php
+容器面板记录文件：/var/www/html/storage/app/panel/host-db-passwords.json
+"""
+import json, os, re, glob, subprocess, sys
+
+PANEL_FILE = '/var/www/html/storage/app/panel/host-db-passwords.json'
+WWWROOT = '/www/wwwroot'
+
+def extract_wp(path):
+    try:
+        s = open(path, encoding='utf-8', errors='ignore').read()
+    except Exception:
+        return None
+    m = re.search(r"define\(\s*['\"]DB_NAME['\"]\s*,\s*['\"]([^'\"]+)['\"]", s)
+    p = re.search(r"define\(\s*['\"]DB_PASSWORD['\"]\s*,\s*['\"]([^'\"]+)['\"]", s)
+    if m and p:
+        return m.group(1).strip(), p.group(1).strip()
+    return None
+
+def extract_typecho(path):
+    try:
+        s = open(path, encoding='utf-8', errors='ignore').read()
+    except Exception:
+        return None
+    db = re.search(r"['\"]database['\"]\s*=>\s*['\"]([^'\"]+)['\"]", s)
+    pw = re.search(r"['\"]password['\"]\s*=>\s*['\"]([^'\"]+)['\"]", s)
+    if db and pw:
+        return db.group(1).strip(), pw.group(1).strip()
+    return None
+
+def extract_nextcloud(path):
+    try:
+        s = open(path, encoding='utf-8', errors='ignore').read()
+    except Exception:
+        return None
+    db = re.search(r"['\"]dbname['\"]\s*=>\s*['\"]([^'\"]+)['\"]", s)
+    pw = re.search(r"['\"]dbpassword['\"]\s*=>\s*['\"]([^'\"]+)['\"]", s)
+    if db and pw:
+        return db.group(1).strip(), pw.group(1).strip()
+    return None
+
+def extract_zblog(path):
+    try:
+        s = open(path, encoding='utf-8', errors='ignore').read()
+    except Exception:
+        return None
+    db = re.search(r"['\"]ZC_DATABASE_NAME['\"]\s*=>\s*['\"]([^'\"]+)['\"]", s)
+    pw = re.search(r"['\"]ZC_DATABASE_PASSWORD['\"]\s*=>\s*['\"]([^'\"]+)['\"]", s)
+    if db and pw:
+        return db.group(1).strip(), pw.group(1).strip()
+    return None
+
+def main():
+    found = {}
+    for d in glob.glob(WWWROOT + '/*'):
+        if not os.path.isdir(d):
+            continue
+        for probe, fn in [
+            (os.path.join(d, 'wp-config.php'), extract_wp),
+            (os.path.join(d, 'config.inc.php'), extract_typecho),
+            (os.path.join(d, 'config', 'config.php'), extract_nextcloud),
+            (os.path.join(d, 'zb_users', 'c_option.php'), extract_zblog),
+        ]:
+            if os.path.isfile(probe):
+                r = fn(probe)
+                if r and r[0] and r[1]:
+                    found[r[0]] = r[1]
+    try:
+        cur_raw = subprocess.check_output(
+            ['docker', 'exec', 'coolify', 'sh', '-c', 'cat %s 2>/dev/null || echo {}' % PANEL_FILE],
+            timeout=15).decode('utf-8', 'ignore') or '{}'
+        cur = json.loads(cur_raw) if cur_raw.strip() else {}
+    except Exception:
+        cur = {}
+    changed = 0
+    for db, pwd in found.items():
+        if db not in cur:
+            cur[db] = pwd
+            changed += 1
+    if changed > 0:
+        payload = json.dumps(cur, ensure_ascii=False)
+        proc = subprocess.Popen(
+            ['docker', 'exec', '-i', 'coolify', 'sh', '-c', 'umask 077; cat > %s' % PANEL_FILE],
+            stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        proc.communicate(payload.encode('utf-8'))
+    print('dbsync: total=%d new=%d' % (len(found), changed), file=sys.stderr)
+
+if __name__ == '__main__':
+    main()
+ABAODBSYNC
+    chmod 755 /www/server/mdserver-web/scripts/abao_dbsync.py
+    /www/server/mdserver-web/bin/python3 -m py_compile /www/server/mdserver-web/scripts/abao_dbsync.py 2>/dev/null \
+        || python3 -c "import ast; ast.parse(open('/www/server/mdserver-web/scripts/abao_dbsync.py').read())" \
+        || warn "abao_dbsync.py 语法检查失败"
+    # crontab 幂等：每分钟同步一次（覆盖后续新部署的网站）
+    (crontab -l 2>/dev/null | grep -v 'abao_dbsync'; echo '*/1 * * * * /usr/bin/python3 /www/server/mdserver-web/scripts/abao_dbsync.py > /dev/null 2>&1') | crontab -
+    # 立即执行一次，把现有站点的库密码补进面板记录文件
+    /usr/bin/python3 /www/server/mdserver-web/scripts/abao_dbsync.py >/dev/null 2>&1 || \
+        /www/server/mdserver-web/bin/python3 /www/server/mdserver-web/scripts/abao_dbsync.py >/dev/null 2>&1 || true
+    ok "数据库密码同步已固化（一键部署库密码面板可显示，B03-50）"
+}
+
 # ---------- B03-43c：宿主 MySQL 密码注入（面板数据库管理直连用） ----------
 inject_mysql_pwd() {
     # MySQL 未安装则跳过（安装后需重跑：bash "$ABAO_DIR/abao-tools.sh" fixmysql 或按日志命令手动注入）
