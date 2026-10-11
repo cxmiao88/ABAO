@@ -546,6 +546,45 @@ install_mdserver() {
     else
         warn "mdserver 面板重启后未响应 48700（可稍后 AB 菜单手动处理）"
     fi
+    # ABao 增强：站点创建支持指定 PHP 版本（建站/已建站点切换 PHP 8.2/8.3，幂等 patch）
+    if [ -f /www/server/mdserver-web/web/admin/site/site.py ] && [ -f /www/server/mdserver-web/web/utils/site.py ]; then
+        cp /www/server/mdserver-web/web/admin/site/site.py /www/server/mdserver-web/web/admin/site/site.py.bak-phpver 2>/dev/null || true
+        cp /www/server/mdserver-web/web/utils/site.py /www/server/mdserver-web/web/utils/site.py.bak-phpver 2>/dev/null || true
+        /www/server/mdserver-web/bin/python3 - <<'ABAOPHPVER'
+import os
+u = '/www/server/mdserver-web/web/utils/site.py'
+a = '/www/server/mdserver-web/web/admin/site/site.py'
+changed = False
+if os.path.exists(u):
+    s = open(u).read()
+    seg = s.split('def add(')[1].split('def addDomain')[0] if 'def add(' in s and 'def addDomain' in s else s
+    if 'php_version' not in seg:
+        s = s.replace(
+            'def add(self, site_info, port, ps, path, version):',
+            "def add(self, site_info, port, ps, path, version, php_version=''):"
+        )
+        anchor = "        mw.restartWeb()\n\n        self.runHook('site_cb', 'add')"
+        ins = "        if php_version:\n            self.setPhpVersion(self.siteName, php_version)\n\n        mw.restartWeb()\n\n        self.runHook('site_cb', 'add')"
+        if anchor in s:
+            s = s.replace(anchor, ins, 1)
+            open(u, 'w').write(s)
+            changed = True
+if os.path.exists(a):
+    s = open(a).read()
+    if "php_version = request.form.get('php_version', '')" not in s:
+        old = "    port = request.form.get('port', '')\n    return MwSites.instance().add(webinfo, port, ps, path, version)"
+        new = "    port = request.form.get('port', '')\n    php_version = request.form.get('php_version', '')\n    return MwSites.instance().add(webinfo, port, ps, path, version, php_version)"
+        if old in s:
+            s = s.replace(old, new, 1)
+            open(a, 'w').write(s)
+            changed = True
+print('phpver-patch:', 'applied' if changed else 'already-ok')
+ABAOPHPVER
+        /www/server/mdserver-web/bin/python3 -m py_compile /www/server/mdserver-web/web/admin/site/site.py /www/server/mdserver-web/web/utils/site.py 2>/dev/null \
+            && ok "站点 PHP 版本增强已固化（建站可选 PHP 版本）" || warn "站点 PHP 版本增强 patch 未完全生效（建站仍可后切）"
+        /etc/rc.d/init.d/mw restart >/dev/null 2>&1 || true
+        sleep 2
+    fi
     # 插件宿主页：/static/app/plugin-host.html（补齐 jQuery/layer/插件公共函数，解决前端 iframe 插件配置白屏）
     if [ -f "$ABAO_DIR/panel-src/plugin-host.html" ]; then
         mkdir -p /www/server/mdserver-web/web/static/app
