@@ -34,6 +34,121 @@ class PanelHostDatabaseService
         return storage_path('app/panel/host-db-passwords.json');
     }
 
+    /** phpMyAdmin signon 一次性令牌文件（容器 storage/app/panel ↔ 宿主 /data/coolify/panel，持久卷） */
+    private function signonFile(): string
+    {
+        return storage_path('app/panel/pma-signon.json');
+    }
+
+    /** 某库的专属管理账号（mysql.db 库级授权反查；无记录返回 null） */
+    public function dbUser(string $db): ?string
+    {
+        $db = $this->sanitizeIdent($db, '数据库名');
+        try {
+            $pdo = $this->pdo();
+            $st = $pdo->prepare(
+                "SELECT User FROM mysql.db WHERE Db = ? AND User NOT IN ('root','mysql.sys','mysql.session','mysql.infoschema') ORDER BY User LIMIT 1"
+            );
+            $st->execute([$db]);
+            $u = $st->fetchColumn();
+
+            return $u === false ? null : (string) $u;
+        } catch (\Throwable $e) {
+            Log::warning("panel-api host db user lookup failed for {$db}: {$e->getMessage()}");
+
+            return null;
+        }
+    }
+
+    /**
+     * 生成 phpMyAdmin signon 一次性令牌（仅限该库专属账号，5 分钟有效）。
+     * 失败时抛异常（无专属账号 / 密码未记录），由 controller 转 JSON 错误。
+     */
+    public function pmaToken(string $db): string
+    {
+        $db = $this->sanitizeIdent($db, '数据库名');
+        // 1) 专属账号（仅该库权限，MySQL 授权天然隔离）
+        $user = $this->dbUser($db);
+        if ($user === null) {
+            throw new \RuntimeException('该数据库没有专属管理账号，无法隔离管理（请用面板为该库创建专属账号）');
+        }
+        // 2) 密码（面板记录；历史遗留库无记录需先改密）
+        $passwords = $this->loadPasswords();
+        $pwd = $passwords[$db] ?? '';
+        if ($pwd === '') {
+            throw new \RuntimeException('该数据库密码未记录，请先在面板修改密码后再管理');
+        }
+        // 3) 生成一次性令牌
+        $token = bin2hex(random_bytes(24));
+        $tokens = $this->loadSignonTokens();
+        // 清理过期
+        foreach ($tokens as $k => $v) {
+            if ((int) ($v['exp'] ?? 0) < time()) {
+                unset($tokens[$k]);
+            }
+        }
+        $tokens[$token] = [
+            'db' => $db,
+            'user' => $user,
+            'pwd' => $pwd,
+            'exp' => time() + 300,
+        ];
+        $this->saveSignonTokens($tokens);
+
+        return $token;
+    }
+
+    /** 校验并消费 signon 令牌（一次性），返回 [db, user, pwd] */
+    public function pmaResolve(string $token): array
+    {
+        $token = preg_replace('/[^a-f0-9]/', '', $token);
+        if (strlen($token) !== 48) {
+            throw new \RuntimeException('非法令牌');
+        }
+        $tokens = $this->loadSignonTokens();
+        if (! isset($tokens[$token])) {
+            throw new \RuntimeException('令牌无效或已使用');
+        }
+        $rec = $tokens[$token];
+        unset($tokens[$token]);
+        $this->saveSignonTokens($tokens);
+        if ((int) ($rec['exp'] ?? 0) < time()) {
+            throw new \RuntimeException('令牌已过期');
+        }
+
+        return [
+            'db' => (string) ($rec['db'] ?? ''),
+            'user' => (string) ($rec['user'] ?? ''),
+            'pwd' => (string) ($rec['pwd'] ?? ''),
+        ];
+    }
+
+    /** 读取 signon 令牌映射 */
+    private function loadSignonTokens(): array
+    {
+        $f = $this->signonFile();
+        if (! is_file($f)) {
+            return [];
+        }
+        $data = json_decode((string) file_get_contents($f), true);
+
+        return is_array($data) ? $data : [];
+    }
+
+    /** 写入 signon 令牌映射（原子写） */
+    private function saveSignonTokens(array $tokens): void
+    {
+        $f = $this->signonFile();
+        $dir = dirname($f);
+        if (! is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+        $tmp = $f.'.tmp';
+        file_put_contents($tmp, json_encode($tokens, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+        @chmod($tmp, 0600);
+        rename($tmp, $f);
+    }
+
     /** 读取面板记录的库→密码映射 */
     private function loadPasswords(): array
     {
@@ -113,6 +228,8 @@ class PanelHostDatabaseService
                 'collation' => $r['collation'],
                 'size' => $size,
                 'tables' => $tables,
+                // 该库专属管理账号（mysql.db 反查；无则空 → 前端提示无法隔离管理）
+                'user' => $this->dbUser($name) ?? '',
                 // 面板记录的明文密码（仅通过面板创建/改密过的库有值；历史遗留库无记录显示未记录）
                 'pwd' => $this->loadPasswords()[$name] ?? '',
             ];
