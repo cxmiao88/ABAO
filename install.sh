@@ -555,6 +555,51 @@ install_mdserver() {
     else
         warn "缺少 panel-src/plugin-host.html，插件配置页可能白屏"
     fi
+    # 插件页组件级深色：site.css 追加 html[data-mode="dark"] 规则（幂等；配合 plugin-host.html 宿主页 data-mode）
+    if [ -f /www/server/mdserver-web/web/static/css/site.css ] && ! grep -q 'ABao 深色主题' /www/server/mdserver-web/web/static/css/site.css; then
+        cat >> /www/server/mdserver-web/web/static/css/site.css <<'ABAODARK'
+/* ===== ABao 深色主题 ===== */
+html[data-mode="dark"] body,
+html[data-mode="dark"] .bt-form,
+html[data-mode="dark"] .bt-w-main,
+html[data-mode="dark"] .bt-w-con { background: #1e2025 !important; color: #d8dae0 !important; }
+html[data-mode="dark"] .bt-w-menu { background: #17181c !important; color: #d8dae0 !important; }
+html[data-mode="dark"] .bt-w-menu p { color: #c9cdd6 !important; }
+html[data-mode="dark"] .bt-w-menu p.bgw,
+html[data-mode="dark"] .bt-w-menu .bgw,
+html[data-mode="dark"] .bt-w-menu p.on,
+html[data-mode="dark"] .bt-w-menu p.active { background: #23262c !important; color: #fff !important; }
+html[data-mode="dark"] .bt-w-menu p:hover { background: #26292f !important; }
+html[data-mode="dark"] .bt-input-text-shell,
+html[data-mode="dark"] .bt-input-text,
+html[data-mode="dark"] input[type=text],
+html[data-mode="dark"] input[type=password],
+html[data-mode="dark"] input[type=number],
+html[data-mode="dark"] select,
+html[data-mode="dark"] textarea { background: #23262c !important; border-color: #3a3f47 !important; color: #e8eaee !important; }
+html[data-mode="dark"] table th { background: #26292f !important; color: #e8eaee !important; border-color: #343941 !important; }
+html[data-mode="dark"] table td { border-color: #343941 !important; }
+html[data-mode="dark"] .layui-layer,
+html[data-mode="dark"] .layui-layer-content,
+html[data-mode="dark"] .layui-layer-dialog { background: #1e2025 !important; color: #d8dae0 !important; max-width: calc(100vw - 40px) !important; box-sizing: border-box !important; }
+html[data-mode="dark"] .layui-layer-btn a { background: #23262c !important; border-color: #3a3f47 !important; color: #e8eaee !important; }
+html[data-mode="dark"] .layui-layer-btn a.layui-layer-btn0 { background: #2f6fed !important; border-color: #2f6fed !important; color: #fff !important; }
+html[data-mode="dark"] .layui-layer-title { background: #26292f !important; color: #e8eaee !important; }
+html[data-mode="dark"] a { color: #5ea8ff !important; }
+html[data-mode="dark"] h1,
+html[data-mode="dark"] h2,
+html[data-mode="dark"] h3,
+html[data-mode="dark"] h4,
+html[data-mode="dark"] .title { color: #e8eaee !important; }
+html[data-mode="dark"] .bt-logs { background: #111318 !important; color: #c8ccd4 !important; }
+ABAODARK
+        ok "插件页深色已注入（site.css html[data-mode=dark]）"
+    fi
+    # mdserver 静态缓存源头清零：Flask SEND_FILE_MAX_AGE_DEFAULT 604800→0（浏览器不再缓存旧插件页/样式）
+    if [ -f /www/server/mdserver-web/web/admin/__init__.py ]; then
+        sed -i "s/SEND_FILE_MAX_AGE_DEFAULT'] = 604800/SEND_FILE_MAX_AGE_DEFAULT'] = 0/" /www/server/mdserver-web/web/admin/__init__.py
+        ok "mdserver 静态缓存已清零（Cache-Control: no-cache）"
+    fi
     # ABao CLI：ab/AB（等同宝塔 bt）——菜单循环保持，处理完自动回菜单，输入 0 或 q 退出
     if [ -f "$ABAO_DIR/panel-src/ab-cli.sh" ]; then
         /bin/cp -f "$ABAO_DIR/panel-src/ab-cli.sh" /usr/local/bin/ab
