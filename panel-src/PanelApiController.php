@@ -1347,6 +1347,36 @@ class PanelApiController extends Controller
         }
     }
 
+    // ===== B03-49：phpMyAdmin signon 隔离管理（只能管理自己账号下的库） =====
+
+    /** 生成某库的 signon 一次性令牌（登录态调用；库专属账号 + 面板密码记录） */
+    public function hostDatabasePmaToken(string $name): JsonResponse
+    {
+        try {
+            $token = $this->hostDatabases->pmaToken($name);
+
+            return response()->json(['status' => 'ok', 'token' => $token]);
+        } catch (\Throwable $e) {
+            Log::warning('panel-api host db pma token failed: '.$e->getMessage());
+
+            return response()->json(['message' => $e->getMessage()], 400);
+        }
+    }
+
+    /** 校验并消费 signon 令牌（公共；token 自证，供宿主 signon.php 调用） */
+    public function resolvePmaToken(string $token): JsonResponse
+    {
+        try {
+            $rec = $this->hostDatabases->pmaResolve($token);
+
+            return response()->json(['status' => 'ok'] + $rec);
+        } catch (\Throwable $e) {
+            Log::warning('panel-api pma token resolve failed: '.$e->getMessage());
+
+            return response()->json(['message' => $e->getMessage()], 401);
+        }
+    }
+
     // ===== B03-43d：宿主 MySQL 备份/恢复/账号/下载（panel 页内闭环，不依赖已失效的 mdserver API）=====
 
     public function hostDbUsers(): JsonResponse
