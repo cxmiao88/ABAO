@@ -649,6 +649,35 @@ UNIT
     systemctl restart abao-mdserver >/dev/null 2>&1 || /etc/rc.d/init.d/mw restart >/dev/null 2>&1 || true
     sleep 5
     ok "文件删除修复补丁 + systemd 守护已生效（mdserver 崩溃自动拉起）"
+    # ---------- ABao 建站前置目录 + 占位 conf（面板软件商店装 openresty 后建站必需） ----------
+    # 缺失 enable-php-0.conf / rewrite 空文件会导致 nginx -t 失败 → 网站访问不了（ERR_CONNECTION_REFUSED）
+    mkdir -p /www/server/web_conf/php/conf /www/server/web_conf/nginx/rewrite
+    [ -f /www/server/web_conf/php/conf/enable-php-0.conf ] || echo 'set $PHP_ENV 0;' > /www/server/web_conf/php/conf/enable-php-0.conf
+    # ABao nginx systemd 守护（openresty 崩溃/重启后自动拉起）
+    cat > /etc/systemd/system/abao-nginx.service <<'UNIT'
+[Unit]
+Description=ABao OpenResty nginx
+After=network.target
+
+[Service]
+Type=forking
+PIDFile=/www/server/openresty/nginx/logs/nginx.pid
+ExecStart=/www/server/openresty/nginx/sbin/nginx
+ExecReload=/www/server/openresty/nginx/sbin/nginx -s reload
+ExecStop=/www/server/openresty/nginx/sbin/nginx -s quit
+Restart=always
+RestartSec=8
+User=root
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+    systemctl daemon-reload >/dev/null 2>&1 && systemctl enable abao-nginx >/dev/null 2>&1
+    # 仅当 openresty 已装且无 master 时拉起（面板软件商店安装 openresty 后建站即可用）
+    if [ -f /www/server/openresty/nginx/sbin/nginx ] && ! pgrep -f 'nginx: master' >/dev/null 2>&1; then
+        systemctl restart abao-nginx >/dev/null 2>&1 || true
+    fi
+    ok "建站占位 conf + nginx systemd 守护已就绪（新建站点访问正常）"
 }
 
 # ---------- 9b. 安装 Web 服务（openresty，站点访问必需） ----------
@@ -765,7 +794,7 @@ print_summary() {
 }
 
 main() {
-    info "========== ABao 阿宝面板一键安装 v2.6.22（文件删除修复 + systemd 守护） =========="
+    info "========== ABao 阿宝面板一键安装 v2.6.23（建站访问修复 + nginx 守护） =========="
     require_root
     detect_os
     enable_ip_forward
