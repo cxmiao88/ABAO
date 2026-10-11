@@ -1,0 +1,16 @@
+[Unit]
+Description=ABao 阿宝面板 mdserver-web 后端服务
+After=network.target
+
+[Service]
+Type=forking
+PIDFile=/www/server/mdserver-web/logs/panel.pid
+ExecStart=/www/server/mdserver-web/scripts/init.d/mw start
+ExecStop=/www/server/mdserver-web/scripts/init.d/mw stop
+ExecReload=/www/server/mdserver-web/scripts/init.d/mw reload
+Restart=always
+RestartSec=8
+User=root
+
+[Install]
+WantedBy=multi-user.target
