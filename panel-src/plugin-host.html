@@ -25,7 +25,7 @@
     '.layui-layer-title{background:#26292f !important;color:#e8eaee !important;}' +
     'a{color:#5ea8ff !important;}' +
     '.bt-logs{background:#111318 !important;color:#c8ccd4 !important;}' +
-    'h1,h2,h3,h4,.title{color:#e8eaee !important;}';
+    'h1,h2,h3,h4,.title{color:#e8eaee !important;}';.layui-layer-dialog{background:#1e2025 !important;color:#d8dae0 !important;max-width:calc(100vw - 40px) !important;box-sizing:border-box !important;}.layui-layer-content{color:#d8dae0 !important;background:#1e2025 !important;}.layui-layer-btn a{background:#23262c !important;border-color:#3a3f47 !important;color:#e8eaee !important;}.layui-layer-btn a.layui-layer-btn0{background:#2f6fed !important;border-color:#2f6fed !important;color:#fff !important;}
   document.head.appendChild(s);
 
   // 方法二：JS 内联样式强制（优先级最高，防 site.css 覆盖）
@@ -51,9 +51,26 @@
     document.querySelectorAll('input,select,textarea').forEach(function (el) {
       set(el, { background: '#23262c', borderColor: '#3a3f47', color: '#e8eaee' });
     });
+    document.querySelectorAll('.layui-layer,.layui-layer-dialog,.layui-layer-content').forEach(function (el) {
+      set(el, { background: '#1e2025', color: '#d8dae0' });
+    });
+    document.querySelectorAll('.layui-layer-btn a').forEach(function (el) {
+      set(el, { background: '#23262c', color: '#e8eaee', borderColor: '#3a3f47' });
+    });
+    document.querySelectorAll('.layui-layer-btn0').forEach(function (el) {
+      set(el, { background: '#2f6fed', color: '#ffffff', borderColor: '#2f6fed' });
+    });
   };
   window.__abaoDark();
   // 插件 JS 动态渲染后再次强制（菜单/表单可能被重绘）
+  try {
+    if (!window.__abaoObserver) {
+      window.__abaoObserver = new MutationObserver(function () {
+        if (window.__abaoDark) window.__abaoDark();
+      });
+      window.__abaoObserver.observe(document.body, { childList: true, subtree: true });
+    }
+  } catch (e) {}
   setTimeout(window.__abaoDark, 300);
   setTimeout(window.__abaoDark, 1200);
   try {
