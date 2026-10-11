@@ -1143,6 +1143,7 @@ main() {
     setup_phpmyadmin_signon
     setup_openresty_reload
     setup_db_password_sync
+    setup_site_deploy_fix
     ensure_backup_dir
     print_summary
     ok "全部完成！如需修改密码：面板「设置」中修改；数据库/Redis 密码见 $ABAO_DIR/.env"
@@ -1322,6 +1323,63 @@ ABAODBSYNC
     /usr/bin/python3 /www/server/mdserver-web/scripts/abao_dbsync.py >/dev/null 2>&1 || \
         /www/server/mdserver-web/bin/python3 /www/server/mdserver-web/scripts/abao_dbsync.py >/dev/null 2>&1 || true
     ok "数据库密码同步已固化（一键部署库密码面板可显示，B03-50）"
+}
+
+# ---------- B03-51：一键部署目录修正 + 删站防御（自定义目录名站点部署失败/删站 500） ----------
+setup_site_deploy_fix() {
+    [ -d /www/server/mdserver-web/web ] || { info "mdserver 未安装，跳过站点部署修复固化"; return; }
+    info "固化站点一键部署/删站修复（B03-51，幂等）…"
+    local PYC="python3"
+    command -v python3 >/dev/null 2>&1 || PYC="/www/server/mdserver-web/bin/python3"
+    "$PYC" - <<'PYEOF'
+import sys
+# 1) deploy_install：站点根目录按 sites.path（站点名可能不等于自定义目录名，如 siteName=ccbbc.ccc、目录=bbcc）
+p1 = '/www/server/mdserver-web/web/admin/site/site.py'
+s = open(p1, encoding='utf-8').read()
+old1 = """    # 站点根目录
+    root_dir = '/www/wwwroot/' + site_name
+    if not os.path.isdir(root_dir):
+        return mw.returnData(False, '站点目录不存在，请先创建站点')"""
+new1 = """    # 站点根目录（ABao: 按 sites.path，站点名可能不等于自定义目录名）
+    site_row = thisdb.getSitesByName(site_name)
+    root_dir = site_row['path'] if site_row else '/www/wwwroot/' + site_name
+    if not os.path.isdir(root_dir):
+        return mw.returnData(False, '站点目录不存在，请先创建站点')"""
+if old1 in s:
+    s = s.replace(old1, new1, 1)
+    open(p1, 'w', encoding='utf-8').write(s)
+    print('deploy_install root_dir -> sites.path OK')
+elif 'site_row = thisdb.getSitesByName' in s:
+    print('deploy_install already patched')
+else:
+    print('WARN deploy_install anchor not found (skip)')
+
+# 2) delete：site_id 不存在时防御（不再 500，返回友好提示；前端传了无效 id 或站点已被删）
+p2 = '/www/server/mdserver-web/web/utils/site.py'
+s = open(p2, encoding='utf-8').read()
+old2 = """    def delete(self, site_id, path):
+        info = thisdb.getSitesById(site_id)
+        webname = info['name']"""
+new2 = """    def delete(self, site_id, path):
+        info = thisdb.getSitesById(site_id)
+        if not info:
+            return mw.returnData(False, '站点不存在或已被删除')
+        webname = info['name']"""
+if old2 in s:
+    s = s.replace(old2, new2, 1)
+    open(p2, 'w', encoding='utf-8').write(s)
+    print('delete None-guard OK')
+elif "if not info:" in s and '站点不存在或已被删除' in s:
+    print('delete already patched')
+else:
+    print('WARN delete anchor not found (skip)')
+PYEOF
+    /www/server/mdserver-web/bin/python3 -m py_compile \
+        /www/server/mdserver-web/web/admin/site/site.py \
+        /www/server/mdserver-web/web/utils/site.py 2>/dev/null \
+        && { systemctl restart abao-mdserver.service >/dev/null 2>&1 || service mdserver-web restart >/dev/null 2>&1 || true; \
+             ok "站点一键部署/删站修复已固化（B03-51）"; } \
+        || warn "site.py 语法检查失败，请手动核对（部署/删站修复未生效）"
 }
 
 # ---------- B03-43c：宿主 MySQL 密码注入（面板数据库管理直连用） ----------
