@@ -1521,29 +1521,28 @@ setup_site_delete_db() {
     local THISDB=/www/server/mdserver-web/web/thisdb/sites.py
     local PYC="python3"
     command -v python3 >/dev/null 2>&1 || PYC="/www/server/mdserver-web/bin/python3"
-    # 1) site.py：delete() 读 del_db/del 本地化目录 + _abao_map_site_db/_abao_drop_site_local/_abao_drop_site_database（幂等标记 ABao B03-61）
-    if ! grep -q "ABao B03-61" "$SITE_PY" 2>/dev/null; then
+    # 1) site.py：delete() 读 del_db/del 本地化目录 + _abao_map_site_db/_abao_drop_site_local/_abao_drop_site_database 增强（幂等标记 _abao_map_site_db）
+    if ! grep -q "_abao_map_site_db" "$SITE_PY" 2>/dev/null; then
         "$PYC" - <<'PYB0361'
 p = '/www/server/mdserver-web/web/admin/site/site.py'
 s = open(p, encoding='utf-8').read()
-# delete() 路由加 del_db + site_local 删除
-old1 = """def delete():
-    site_id = request.form.get('id', '')
-    path = request.form.get('path', '')
-    return MwSites.instance().delete(site_id, path)"""
-new1 = """def delete():
-    site_id = request.form.get('id', '')
-    path = request.form.get('path', '')
-    del_db = request.form.get('del_db', '')
-    if del_db == '1':
-        _abao_drop_site_database(site_id)  # ABao B03-61: 勾选删除关联数据库
-    if path == '1':
+import re as _re
+# A) delete() 加 site_local（宽松锚点：按 return 行插入，兼容全新/旧版）
+mark = "    if path == '1':\n        _abao_drop_site_local(site_id)"
+if mark not in s:
+    old1 = "    return MwSites.instance().delete(site_id, path)"
+    new1 = """    if path == '1':
         _abao_drop_site_local(site_id)  # ABao B03-61: 同步删除本地化程序目录（B03-59 混合架构）
     return MwSites.instance().delete(site_id, path)"""
-if "# ABao B03-61" not in s:
-    s = s.replace(old1, new1, 1)
-fn = r'''
-def _abao_map_site_db(site_name, db_name):
+    if "del_db = request.form.get('del_db', '')" not in s:
+        new1 = """    del_db = request.form.get('del_db', '')
+    if del_db == '1':
+        _abao_drop_site_database(site_id)  # ABao B03-61: 勾选删除关联数据库
+""" + new1
+    if old1 in s:
+        s = s.replace(old1, new1, 1)
+# B) _abao_map_site_db
+fn_map = r'''def _abao_map_site_db(site_name, db_name):
     """ABao B03-61: 建库即记录「站点→库」映射（site-db-map.json），删除站点时可精确删库，
     不依赖 wp-config 提取（一键部署中断/无配置文件场景也能删干净）。幂等：覆盖同名站。"""
     try:
@@ -1564,7 +1563,11 @@ def _abao_map_site_db(site_name, db_name):
         pass
 
 
-def _abao_drop_site_local(site_id):
+'''
+if "def _abao_map_site_db" not in s:
+    s = s.replace("def _abao_sync_db_pwd", fn_map + "def _abao_sync_db_pwd", 1)
+# C) _abao_drop_site_local
+fn_local = r'''def _abao_drop_site_local(site_id):
     """ABao B03-61: 删除本地化程序目录 site_local/<webname>（本地盘，同步删）"""
     try:
         info = thisdb.getSitesById(site_id)
@@ -1580,7 +1583,11 @@ def _abao_drop_site_local(site_id):
         pass
 
 
-def _abao_drop_site_database(site_id):
+'''
+if "def _abao_drop_site_local" not in s:
+    s = s.replace("def _abao_drop_site_database", fn_local + "def _abao_drop_site_database", 1)
+# D) _abao_drop_site_database（全新插入 or 正则替换旧版为增强版）
+fn_drop = r'''def _abao_drop_site_database(site_id):
     """ABao B03-61: 删除站点时勾选删除关联数据库（优先查站点→库映射，其次扫 CMS 配置提取库名 → DROP DB+USER + 清面板映射 + 清映射记录）"""
     try:
         info = thisdb.getSitesById(site_id)
@@ -1663,20 +1670,28 @@ def _abao_drop_site_database(site_id):
 
 '''
 if "def _abao_drop_site_database" not in s:
-    s = s.replace("def _abao_download_extract", fn + "def _abao_download_extract", 1)
-# deploy_install 建库后写映射（幂等）
-old2 = """        _abao_sync_db_pwd(db_name, db_pwd)  # ABao B03-60: 建库即记录密码，防「未记录」"""
+    s = s.replace("def _abao_download_extract", fn_drop + "def _abao_download_extract", 1)
+else:
+    pat = _re.compile(r"\ndef _abao_drop_site_database\(site_id\):.*?(?=\ndef _abao_download_extract)", _re.S)
+    if pat.search(s):
+        s = pat.sub(lambda m: "\n" + fn_drop + "\n", s, count=1)
+# E) deploy_install 建库后写映射（幂等，兼容有无 B03-60 注释两种现场）
+old2a = "        _abao_sync_db_pwd(db_name, db_pwd)"
+old2b = "        _abao_sync_db_pwd(db_name, db_pwd)  # ABao B03-60: 建库即记录密码，防「未记录」"
 new2 = """        _abao_sync_db_pwd(db_name, db_pwd)  # ABao B03-60: 建库即记录密码，防「未记录」
         _abao_map_site_db(site_name, db_name)  # ABao B03-61: 记录站点→库映射，删站时精确删库"""
-if "_abao_map_site_db(site_name" not in s:
-    s = s.replace(old2, new2, 1)
+if "        _abao_map_site_db(site_name, db_name)" not in s:
+    for old2 in (old2b, old2a):
+        if old2 in s:
+            s = s.replace(old2, new2, 1)
+            break
 open(p, 'w', encoding='utf-8').write(s)
 print('site.py B03-61 patched')
 PYB0361
         "$PYC" -c "import ast; ast.parse(open('$SITE_PY', encoding='utf-8').read())" || warn "site.py B03-61 语法检查失败"
         ok "site.py 删站勾选删库/删目录已固化（B03-61 增强）"
     else
-        info "site.py 已含 B03-61 补丁，跳过"
+        info "site.py 已含 B03-61 增强补丁，跳过"
     fi
     # 2) thisdb/sites.py：type_id=0 表示全部（站点列表不空）
     if ! grep -q "ABao B03-61" "$THISDB" 2>/dev/null; then
