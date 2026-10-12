@@ -1147,6 +1147,7 @@ main() {
     setup_site_deploy_fix
     setup_site_delete_db
     setup_site_domain_fix
+    setup_site_domain_port_fix
     setup_disk_fix
     setup_data_disk
     setup_obj_disk
@@ -1750,6 +1751,81 @@ PYB0362
         && { systemctl restart abao-mdserver.service >/dev/null 2>&1 || service mdserver-web restart >/dev/null 2>&1 || true; \
              ok "建站域名修复已固化（B03-62）"; } \
         || warn "utils/site.py 语法检查失败，请手动核对（建站域名修复未生效）"
+}
+
+# ---------- B03-63：删除域名失败修复（域名列表带 port + delDomain 防御 + server_name 重建） ----------
+setup_site_domain_port_fix() {
+    [ -d /www/server/mdserver-web/web ] || { info "mdserver 未安装，跳过删域名固化"; return; }
+    info "固化删除域名（域名列表带 port / delDomain 防御 / server_name 不空，幂等）…"
+    local PYC="python3"
+    command -v python3 >/dev/null 2>&1 || PYC="/www/server/mdserver-web/bin/python3"
+    "$PYC" - <<'PYB0363'
+p1 = '/www/server/mdserver-web/web/thisdb/sites.py'
+s1 = open(p1, encoding='utf-8').read()
+old1 = """    domains = mw.M('domain').where('pid=?', (site_id,)).field('name,id').select()
+    binding = mw.M('binding').where('pid=?', (site_id,)).field('domain,id').select()
+    for b in binding:
+        t = {}
+        t['name'] = b['domain']
+        t['id'] = b['id']
+        domains.append(t)"""
+new1 = """    domains = mw.M('domain').where('pid=?', (site_id,)).field('name,id,port').select()
+    binding = mw.M('binding').where('pid=?', (site_id,)).field('domain,id').select()
+    for b in binding:
+        t = {}
+        t['name'] = b['domain']
+        t['id'] = b['id']
+        t['port'] = ''
+        domains.append(t)"""
+if 'field(\'name,id,port\')' in s1:
+    print('thisdb 域名列表已带 port，跳过')
+elif old1 in s1:
+    s1 = s1.replace(old1, new1, 1)
+    open(p1, 'w', encoding='utf-8').write(s1)
+    print('thisdb 域名列表已带 port')
+else:
+    print('WARN thisdb 锚点未匹配（skip）')
+
+p2 = '/www/server/mdserver-web/web/utils/site.py'
+s2 = open(p2, encoding='utf-8').read()
+old2 = """        info = mw.M('domain').field('id,name').where("pid=? AND name=? AND port=?",(site_id, domain, port)).find()
+
+        file = self.getHostConf(site_name)"""
+new2 = """        # ABao：port 为空时按 name 查（前端可能未传端口），命中多条取第一条
+        if port == '':
+            info = mw.M('domain').field('id,name').where("pid=? AND name=?", (site_id, domain)).find()
+        else:
+            info = mw.M('domain').field('id,name').where("pid=? AND name=? AND port=?", (site_id, domain, port)).find()
+        if not info:
+            return mw.returnData(False, '域名不存在或已删除!')
+
+        file = self.getHostConf(site_name)"""
+if 'ABao：port 为空时按 name 查' in s2:
+    print('delDomain port 兜底已存在，跳过')
+elif old2 in s2:
+    s2 = s2.replace(old2, new2, 1)
+    open(p2, 'w', encoding='utf-8').write(s2)
+    print('delDomain port 兜底已写入')
+else:
+    print('WARN delDomain 锚点未匹配（skip）')
+
+# delDomain server_name 删除后不能为空（多端口共用域名）：在 newServerName 处理后重建
+anchor = "            newServerName = newServerName.replace(' ' + domain + ' ', ' ')"
+insert = anchor + "\n            # ABao：删除后 server_name 不能为空，用剩余域名重建（多端口共用域名场景）\n            if re.match(r'server_name\s*;', newServerName):\n                remain = mw.M('domain').field('name').where('pid=?', (site_id,)).select()\n                names = list(dict.fromkeys([r['name'] for r in remain]))\n                if names:\n                    newServerName = 'server_name ' + ' '.join(names) + ';'"
+if '删除后 server_name 不能为空' in s2:
+    print('delDomain server_name 重建已存在，跳过')
+elif anchor in s2:
+    s2 = s2.replace(anchor, insert, 1)
+    open(p2, 'w', encoding='utf-8').write(s2)
+    print('delDomain server_name 重建已写入')
+else:
+    print('WARN server_name 重建锚点未匹配（skip）')
+PYB0363
+    /www/server/mdserver-web/bin/python3 -m py_compile /www/server/mdserver-web/web/utils/site.py 2>/dev/null \
+        && /www/server/mdserver-web/bin/python3 -m py_compile /www/server/mdserver-web/web/thisdb/sites.py 2>/dev/null \
+        && { systemctl restart abao-mdserver.service >/dev/null 2>&1 || service mdserver-web restart >/dev/null 2>&1 || true; \
+             ok "删除域名修复已固化（B03-63）"; } \
+        || warn "语法检查失败，请手动核对（删除域名修复未生效）"
 }
 
 # ---------- B03-52a/53：磁盘容量显示（本地块设备保留；对象存储 cosfs/fuse 单独显示为「对象存储」+ du 真实用量；overlay/网络挂载排除） ----------
