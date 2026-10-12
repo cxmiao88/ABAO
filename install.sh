@@ -1149,6 +1149,7 @@ main() {
     setup_site_domain_fix
     setup_site_domain_port_fix
     setup_site_list_domain_fix
+    setup_site_deploy_local_fix
     setup_disk_fix
     setup_data_disk
     setup_obj_disk
@@ -1871,6 +1872,107 @@ PYB0364
         && { systemctl restart abao-mdserver.service >/dev/null 2>&1 || service mdserver-web restart >/dev/null 2>&1 || true; \
              ok "站点列表补域名已固化（B03-64）"; } \
         || warn "语法检查失败，请手动核对（站点列表补域名未生效）"
+}
+
+# ---------- B03-66：一键部署本地化（程序直接解压到本地 site_local，跳过对象存储 cosfs 慢写；uploads 软链回对象存储） ----------
+setup_site_deploy_local_fix() {
+    [ -f /www/server/mdserver-web/web/admin/site/site.py ] || { info "mdserver 未安装，跳过一键部署本地化固化"; return; }
+    info "固化一键部署本地化（程序解压本地、数据在对象存储，幂等）…"
+    local PYC="python3"
+    command -v python3 >/dev/null 2>&1 || PYC="/www/server/mdserver-web/bin/python3"
+    "$PYC" - <<'PYB0366'
+p = '/www/server/mdserver-web/web/admin/site/site.py'
+s = open(p, encoding='utf-8').read()
+old = """    # 下载解压
+    ok, msg = _abao_download_extract(prog['url'], prog['key'], root_dir)
+    if not ok:
+        return mw.returnData(False, msg)
+    # WordPress 自动写 wp-config
+    wp_hint = ''
+    if prog['key'] == 'wordpress':
+        if _abao_write_wp_config(root_dir, db_name, db_user, db_pwd):
+            wp_hint = '（已自动写入数据库配置）'
+    # ABao B03-59: 动态程序本地化（对象存储 COS IO 延迟导致 WP 每次请求 realpath 累积 10-16s；
+    # 程序放本地磁盘秒开，wp-content/uploads 数据软链回对象存储，网站内容数据仍在 COS）
+    local_hint = ''
+    if prog['type'] == 'php' and os.path.exists(root_dir + '/index.php'):
+        local_site = '/www/server/site_local/' + site_name
+        _abao_shutil.rmtree(local_site, ignore_errors=True)
+        os.makedirs(local_site, exist_ok=True)
+        mw.execShell('cp -rf ' + root_dir + '/* ' + local_site + '/ 2>/dev/null; true')
+        mw.execShell('cp -rf ' + root_dir + '/.[!.]* ' + local_site + '/ 2>/dev/null; true')
+        if prog['key'] == 'wordpress':
+            up_local = local_site + '/wp-content/uploads'
+            up_cos = root_dir + '/wp-content/uploads'
+            _abao_shutil.rmtree(up_local, ignore_errors=True)
+            try:
+                os.makedirs(up_cos, exist_ok=True)
+                os.symlink(up_cos, up_local)
+            except Exception:
+                pass
+        conf = '/www/server/web_conf/nginx/vhost/' + site_name + '.conf'
+        if os.path.exists(conf):
+            c = mw.readFile(conf)
+            c = c.replace('root ' + root_dir + ';', 'root ' + local_site + '; # ABao B03-59')
+            mw.writeFile(conf, c)
+            mw.execShell('/www/server/openresty/nginx/sbin/nginx -t >/dev/null 2>&1 && /www/server/openresty/nginx/sbin/nginx -s reload >/dev/null 2>&1; true')
+        mw.execShell('chown -R www:www ' + local_site + ' 2>/dev/null; chmod -R 755 ' + local_site + ' 2>/dev/null; true')
+        local_hint = '（程序已本地化加速，上传数据仍在对象存储）'"""
+new = """    # 下载解压——ABao B03-66: 程序直接解压到本地 site_local（对象存储 cosfs 逐个文件写极慢/易卡死），
+    # 数据目录（如 WP wp-content/uploads）软链回对象存储，网站内容数据仍在 COS
+    local_site = '/www/server/site_local/' + site_name
+    local_hint = ''
+    wp_hint = ''
+    if prog['type'] == 'php':
+        _abao_shutil.rmtree(local_site, ignore_errors=True)
+        os.makedirs(local_site, exist_ok=True)
+        ok, msg = _abao_download_extract(prog['url'], prog['key'], local_site)
+        if not ok:
+            return mw.returnData(False, msg)
+        # root_dir（对象存储/站点根）仅保留数据目录
+        if prog['key'] == 'wordpress':
+            up_cos = root_dir + '/wp-content/uploads'
+            up_local = local_site + '/wp-content/uploads'
+            try:
+                os.makedirs(up_cos, exist_ok=True)
+            except Exception:
+                pass
+            _abao_shutil.rmtree(up_local, ignore_errors=True)
+            try:
+                os.symlink(up_cos, up_local)
+            except Exception:
+                pass
+        # nginx root → local_site（程序跑本地，数据在对象存储）
+        conf = '/www/server/web_conf/nginx/vhost/' + site_name + '.conf'
+        if os.path.exists(conf):
+            c = mw.readFile(conf)
+            c = c.replace('root ' + root_dir + ';', 'root ' + local_site + '; # ABao B03-59')
+            mw.writeFile(conf, c)
+            mw.execShell('/www/server/openresty/nginx/sbin/nginx -t >/dev/null 2>&1 && /www/server/openresty/nginx/sbin/nginx -s reload >/dev/null 2>&1; true')
+        mw.execShell('chown -R www:www ' + local_site + ' 2>/dev/null; chmod -R 755 ' + local_site + ' 2>/dev/null; true')
+        local_hint = '（程序已本地化加速，上传数据仍在对象存储）'
+    else:
+        ok, msg = _abao_download_extract(prog['url'], prog['key'], root_dir)
+        if not ok:
+            return mw.returnData(False, msg)
+    # WordPress 自动写 wp-config（写程序所在目录 local_site）
+    if prog['key'] == 'wordpress':
+        wp_target = local_site if prog['type'] == 'php' else root_dir
+        if _abao_write_wp_config(wp_target, db_name, db_user, db_pwd):
+            wp_hint = '（已自动写入数据库配置）'"""
+if 'B03-66: 程序直接解压到本地' in s:
+    print('一键部署本地化已存在，跳过')
+elif old in s:
+    s = s.replace(old, new, 1)
+    open(p, 'w', encoding='utf-8').write(s)
+    print('一键部署本地化已写入')
+else:
+    print('WARN 锚点未匹配（skip）')
+PYB0366
+    /www/server/mdserver-web/bin/python3 -m py_compile /www/server/mdserver-web/web/admin/site/site.py 2>/dev/null \
+        && { systemctl restart abao-mdserver.service >/dev/null 2>&1 || service mdserver-web restart >/dev/null 2>&1 || true; \
+             ok "一键部署本地化已固化（B03-66）"; } \
+        || warn "语法检查失败，请手动核对（一键部署本地化未生效）"
 }
 
 # ---------- B03-52a/53：磁盘容量显示（本地块设备保留；对象存储 cosfs/fuse 单独显示为「对象存储」+ du 真实用量；overlay/网络挂载排除） ----------
