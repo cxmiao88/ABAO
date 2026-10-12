@@ -1145,6 +1145,7 @@ main() {
     setup_db_password_sync
     setup_db_pwd_direct_sync
     setup_site_deploy_fix
+    setup_site_delete_db
     setup_disk_fix
     setup_data_disk
     setup_obj_disk
@@ -1510,6 +1511,135 @@ PYEOF
         && { systemctl restart abao-mdserver.service >/dev/null 2>&1 || service mdserver-web restart >/dev/null 2>&1 || true; \
              ok "站点一键部署/删站修复已固化（B03-51）"; } \
         || warn "site.py 语法检查失败，请手动核对（部署/删站修复未生效）"
+}
+
+# ---------- B03-61：删站勾选确认（目录/数据库）+ 站点列表 type_id=0 表示全部 ----------
+setup_site_delete_db() {
+    [ -d /www/server/mdserver-web/web ] || { info "mdserver 未安装，跳过删站勾选固化"; return; }
+    info "固化删站勾选删目录/数据库（B03-61，幂等）…"
+    local SITE_PY=/www/server/mdserver-web/web/admin/site/site.py
+    local THISDB=/www/server/mdserver-web/web/thisdb/sites.py
+    local PYC="python3"
+    command -v python3 >/dev/null 2>&1 || PYC="/www/server/mdserver-web/bin/python3"
+    # 1) site.py：delete() 读 del_db + _abao_drop_site_database 函数（幂等标记 ABao B03-61）
+    if ! grep -q "ABao B03-61" "$SITE_PY" 2>/dev/null; then
+        "$PYC" - <<'PYB0361'
+p = '/www/server/mdserver-web/web/admin/site/site.py'
+s = open(p, encoding='utf-8').read()
+# delete() 路由加 del_db
+old1 = """def delete():
+    site_id = request.form.get('id', '')
+    path = request.form.get('path', '')
+    return MwSites.instance().delete(site_id, path)"""
+new1 = """def delete():
+    site_id = request.form.get('id', '')
+    path = request.form.get('path', '')
+    del_db = request.form.get('del_db', '')
+    if del_db == '1':
+        _abao_drop_site_database(site_id)  # ABao B03-61: 勾选删除关联数据库
+    return MwSites.instance().delete(site_id, path)"""
+if "# ABao B03-61" not in s:
+    s = s.replace(old1, new1, 1)
+fn = r'''
+def _abao_drop_site_database(site_id):
+    """ABao B03-61: 删除站点时勾选删除关联数据库（扫描站点 CMS 配置提取库名 → DROP DB+USER + 清面板映射）"""
+    try:
+        info = thisdb.getSitesById(site_id)
+        if not info:
+            return False
+        webname = info.get('name', '')
+        web_root = info.get('path', '') if info.get('path', '').startswith('/') else (mw.getWwwDir() + '/' + webname)
+        db_name = ''
+        for base in (web_root, '/www/server/site_local/' + webname):
+            if not base or not os.path.isdir(base):
+                continue
+            for probe in ('wp-config.php', 'config.inc.php', 'config/config.php', 'zb_users/c_option.php'):
+                fp = os.path.join(base, probe)
+                if not os.path.isfile(fp):
+                    continue
+                try:
+                    content = open(fp, encoding='utf-8', errors='ignore').read()
+                except Exception:
+                    continue
+                m = re.search(r"define\s*\(\s*[\"']DB_NAME[\"']\s*,\s*[\"']([^\"']+)[\"']", content)
+                if not m:
+                    m = re.search(r"[\"']database[\"']\s*=>\s*[\"']([^\"']+)[\"']", content)
+                if not m:
+                    m = re.search(r"[\"']dbname[\"']\s*=>\s*[\"']([^\"']+)[\"']", content)
+                if not m:
+                    m = re.search(r"[\"']ZC_DATABASE_NAME[\"']\s*=>\s*[\"']([^\"']+)[\"']", content)
+                if m:
+                    db_name = m.group(1).strip()
+                    break
+            if db_name:
+                break
+        if not db_name or not re.match(r'^[a-zA-Z0-9_]+$', db_name):
+            return False  # 无关联库或库名非法，跳过
+        root_pwd = _abao_get_mysql_root()
+        if root_pwd:
+            sock = '/www/server/mysql-community/mysql.sock'
+            mysql = '/www/server/mysql-community/bin/mysql'
+            sql = ("DROP DATABASE IF EXISTS %s;"
+                   "DROP USER IF EXISTS '%s'@'localhost';"
+                   "DROP USER IF EXISTS '%s'@'127.0.0.1';"
+                   "FLUSH PRIVILEGES;") % (db_name, db_name, db_name)
+            cmd = mysql + " -uroot -p'" + root_pwd + "' -S " + sock + ' -e "' + sql + '"'
+            mw.execShell(cmd)
+        # 清容器面板密码映射记录
+        try:
+            panel = '/var/www/html/storage/app/panel/host-db-passwords.json'
+            cur_raw = mw.execShell("docker exec coolify sh -c 'cat %s 2>/dev/null || echo {}'" % panel)[0]
+            cur = json.loads(cur_raw) if cur_raw.strip() else {}
+            if not isinstance(cur, dict):
+                cur = {}
+            if db_name in cur:
+                del cur[db_name]
+                payload = json.dumps(cur, ensure_ascii=False)
+                mw.execShell("docker exec -i coolify sh -c 'umask 077; cat > %s'" % panel + " <<'JSONEOF'\n" + payload + "\nJSONEOF")
+        except Exception:
+            pass
+        return True
+    except Exception:
+        return False
+
+
+'''
+if "def _abao_drop_site_database" not in s:
+    s = s.replace("def _abao_download_extract", fn + "def _abao_download_extract", 1)
+open(p, 'w', encoding='utf-8').write(s)
+print('site.py B03-61 patched')
+PYB0361
+        "$PYC" -c "import ast; ast.parse(open('$SITE_PY', encoding='utf-8').read())" || warn "site.py B03-61 语法检查失败"
+        ok "site.py 删站勾选删库已固化（B03-61）"
+    else
+        info "site.py 已含 B03-61 补丁，跳过"
+    fi
+    # 2) thisdb/sites.py：type_id=0 表示全部（站点列表不空）
+    if ! grep -q "ABao B03-61" "$THISDB" 2>/dev/null; then
+        "$PYC" - <<'PYB0361B'
+p = '/www/server/mdserver-web/web/thisdb/sites.py'
+s = open(p, encoding='utf-8').read()
+old = """    if type_id != '' and int(type_id) >= 0 and search != '' :
+        sql_where = sql_where + " and type_id=" + str(type_id) + ""
+    if type_id != '' and int(type_id) >= 0:
+        sql_where = " type_id=" + str(type_id)"""
+new = """    if type_id != '' and int(type_id) > 0 and search != '' :  # ABao B03-61: type_id=0 表示全部
+        sql_where = sql_where + " and type_id=" + str(type_id) + ""
+    if type_id != '' and int(type_id) > 0:
+        sql_where = " type_id=" + str(type_id)"""
+if "ABao B03-61" not in s:
+    s = s.replace(old, new, 1)
+    open(p, 'w', encoding='utf-8').write(s)
+    print('thisdb B03-61 patched')
+PYB0361B
+        "$PYC" -c "import ast; ast.parse(open('$THISDB', encoding='utf-8').read())" || warn "thisdb B03-61 语法检查失败"
+        ok "站点列表 type_id=0 已修复（B03-61）"
+    else
+        info "thisdb 已含 B03-61 补丁，跳过"
+    fi
+    # 3) 重启 mdserver 加载
+    systemctl restart abao-mdserver.service >/dev/null 2>&1 || service abao-mdserver restart >/dev/null 2>&1 || true
+    ok "删站勾选固化完成（B03-61）"
 }
 
 # ---------- B03-52a/53：磁盘容量显示（本地块设备保留；对象存储 cosfs/fuse 单独显示为「对象存储」+ du 真实用量；overlay/网络挂载排除） ----------
