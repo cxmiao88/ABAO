@@ -1148,6 +1148,7 @@ main() {
     setup_site_delete_db
     setup_site_domain_fix
     setup_site_domain_port_fix
+    setup_site_list_domain_fix
     setup_disk_fix
     setup_data_disk
     setup_obj_disk
@@ -1826,6 +1827,50 @@ PYB0363
         && { systemctl restart abao-mdserver.service >/dev/null 2>&1 || service mdserver-web restart >/dev/null 2>&1 || true; \
              ok "删除域名修复已固化（B03-63）"; } \
         || warn "语法检查失败，请手动核对（删除域名修复未生效）"
+}
+
+# ---------- B03-64：站点列表补域名（列表域名列 + 预览用真实域名，不用网站名当 URL） ----------
+setup_site_list_domain_fix() {
+    [ -d /www/server/mdserver-web/web ] || { info "mdserver 未安装，跳过站点列表域名固化"; return; }
+    info "固化站点列表补域名（预览用真实域名，不用网站名，幂等）…"
+    local PYC="python3"
+    command -v python3 >/dev/null 2>&1 || PYC="/www/server/mdserver-web/bin/python3"
+    "$PYC" - <<'PYB0364'
+p = '/www/server/mdserver-web/web/admin/site/site.py'
+s = open(p, encoding='utf-8').read()
+old = """    info = thisdb.getSitesList(page=int(p),size=int(limit),type_id=int(type_id), search=search,order=order)
+
+    data = {}
+    data['data'] = info['list']"""
+new = """    info = thisdb.getSitesList(page=int(p),size=int(limit),type_id=int(type_id), search=search,order=order)
+
+    data = {}
+    data['data'] = info['list']
+    # ABao B03-64: 站点列表补域名（域名列 + 预览用真实域名，不用网站名）
+    for _s in data['data']:
+        _doms = mw.M('domain').where('pid=?', (_s['id'],)).field('name,port').select()
+        _names = []
+        for _d in _doms:
+            _nm = _d['name']
+            _pt = str(_d.get('port') or '')
+            if _pt and _pt != '80':
+                _nm += ':' + _pt
+            _names.append(_nm)
+        _s['domain'] = _names[0] if _names else ''
+        _s['domains'] = _names"""
+if 'B03-64: 站点列表补域名' in s:
+    print('站点列表补域名已存在，跳过')
+elif old in s:
+    s = s.replace(old, new, 1)
+    open(p, 'w', encoding='utf-8').write(s)
+    print('站点列表补域名已写入')
+else:
+    print('WARN 锚点未匹配（skip）')
+PYB0364
+    /www/server/mdserver-web/bin/python3 -m py_compile /www/server/mdserver-web/web/admin/site/site.py 2>/dev/null \
+        && { systemctl restart abao-mdserver.service >/dev/null 2>&1 || service mdserver-web restart >/dev/null 2>&1 || true; \
+             ok "站点列表补域名已固化（B03-64）"; } \
+        || warn "语法检查失败，请手动核对（站点列表补域名未生效）"
 }
 
 # ---------- B03-52a/53：磁盘容量显示（本地块设备保留；对象存储 cosfs/fuse 单独显示为「对象存储」+ du 真实用量；overlay/网络挂载排除） ----------
