@@ -1146,6 +1146,7 @@ main() {
     setup_db_pwd_direct_sync
     setup_site_deploy_fix
     setup_site_delete_db
+    setup_site_domain_fix
     setup_disk_fix
     setup_data_disk
     setup_obj_disk
@@ -1719,6 +1720,36 @@ PYB0361B
     # 3) 重启 mdserver 加载
     systemctl restart abao-mdserver.service >/dev/null 2>&1 || service abao-mdserver restart >/dev/null 2>&1 || true
     ok "删站勾选固化完成（B03-61）"
+}
+
+# ---------- B03-62：建站自定义名不再写入域名表（域名列不显示网站名） ----------
+setup_site_domain_fix() {
+    [ -d /www/server/mdserver-web/web ] || { info "mdserver 未安装，跳过建站域名固化"; return; }
+    info "固化建站域名（自定义站点名不再写入域名表，幂等）…"
+    local PYC="python3"
+    command -v python3 >/dev/null 2>&1 || PYC="/www/server/mdserver-web/bin/python3"
+    "$PYC" - <<'PYB0362'
+p = '/www/server/mdserver-web/web/utils/site.py'
+s = open(p, encoding='utf-8').read()
+old = """        # 主域名配置
+        thisdb.addDomain(site_id, self.siteName, self.sitePort)"""
+new = """        # 主域名配置（ABao：自定义站点名时不能用站点名顶替域名；主域名已并入 domainlist 由下方循环统一添加）
+        if not custom_name:
+            thisdb.addDomain(site_id, self.siteName, self.sitePort)"""
+if '不能用站点名顶替域名' not in s:
+    if old in s:
+        s = s.replace(old, new, 1)
+        open(p, 'w', encoding='utf-8').write(s)
+        print('utils/site.py 域名写入已修复（自定义名不当域名）')
+    else:
+        print('WARN 锚点未匹配（skip）')
+else:
+    print('已存在修复，跳过')
+PYB0362
+    /www/server/mdserver-web/bin/python3 -m py_compile /www/server/mdserver-web/web/utils/site.py 2>/dev/null \
+        && { systemctl restart abao-mdserver.service >/dev/null 2>&1 || service mdserver-web restart >/dev/null 2>&1 || true; \
+             ok "建站域名修复已固化（B03-62）"; } \
+        || warn "utils/site.py 语法检查失败，请手动核对（建站域名修复未生效）"
 }
 
 # ---------- B03-52a/53：磁盘容量显示（本地块设备保留；对象存储 cosfs/fuse 单独显示为「对象存储」+ du 真实用量；overlay/网络挂载排除） ----------
