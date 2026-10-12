@@ -1150,6 +1150,7 @@ main() {
     setup_disk_cache
     setup_obj_disk_route
     setup_site_delete_async
+    setup_site_local_runtime
     ensure_backup_dir
     print_summary
     ok "全部完成！如需修改密码：面板「设置」中修改；数据库/Redis 密码见 $ABAO_DIR/.env"
@@ -1801,6 +1802,112 @@ PYEOF
         && { systemctl restart abao-mdserver.service >/dev/null 2>&1 || service mdserver-web restart >/dev/null 2>&1 || true; \
              ok "站点删除异步化已固化（对象存储大目录删除不阻塞面板，B03-58）"; } \
         || warn "site.py 语法检查失败（删除异步未生效）"
+}
+
+# ---------- B03-59：动态站点程序本地化（对象存储 COS IO 延迟导致 WP 等 10s/请求 → 程序本地 + 数据软链对象存储） ----------
+setup_site_local_runtime() {
+    [ -f /www/server/mdserver-web/web/utils/site.py ] || { info "mdserver 未安装，跳过站点程序本地化"; return; }
+    info "固化站点程序本地化（B03-59：PHP 动态程序放本地磁盘，uploads 等数据软链对象存储，幂等）…"
+    /www/server/mdserver-web/bin/python3 - <<'PYEOF'
+import os, re, glob, shutil
+WWWROOT = '/www/wwwroot'
+LOCAL = '/www/server/site_local'
+os.makedirs(LOCAL, exist_ok=True)
+# 1) 站点程序本地化：对 PHP 站点（含 index.php/wp-config.php 等），程序复制到 LOCAL/<site>，uploads 软链回对象存储
+for conf in glob.glob('/www/server/web_conf/nginx/vhost/*.conf'):
+    try:
+        s = open(conf, encoding='utf-8').read()
+    except Exception:
+        continue
+    if 'ABao B03-59' in s or 'site_local' in s:
+        continue  # 已适配
+    m = re.search(r'root\s+(/www/wwwroot/([^;]+));', s)
+    if not m:
+        continue
+    root_path, site_name = m.group(1).strip(), m.group(2).strip()
+    # 站点在对象存储（软链或实体）上有程序文件才算动态站
+    idx = os.path.join(root_path, 'index.php')
+    if not os.path.exists(idx):
+        continue
+    local_site = os.path.join(LOCAL, site_name)
+    # 复制程序到本地（幂等：本地已存在且文件数足够则跳过）
+    cos_n = sum(1 for _ in os.listdir(root_path) if os.path.isfile(os.path.join(root_path, _))) if os.path.isdir(root_path) else 0
+    need_copy = True
+    if os.path.isdir(local_site):
+        local_n = len(os.listdir(local_site)) if os.path.isdir(local_site) else 0
+        if local_n >= 10 and os.path.exists(os.path.join(local_site, 'index.php')):
+            need_copy = False
+    if need_copy:
+        print('  B03-59: 复制程序 %s -> %s' % (site_name, local_site))
+        shutil.rmtree(local_site, ignore_errors=True)
+        try:
+            shutil.copytree(root_path, local_site, symlinks=True)
+        except Exception as e:
+            print('  复制失败: %s' % str(e)[:100])
+    # uploads 软链到对象存储（数据仍在 COS）
+    up_local = os.path.join(local_site, 'wp-content', 'uploads')
+    up_cos = os.path.join(root_path, 'wp-content', 'uploads')
+    if os.path.isdir(up_local) and not os.path.islink(up_local):
+        os.makedirs(up_cos, exist_ok=True)
+        shutil.rmtree(up_local, ignore_errors=True)
+        os.symlink(up_cos, up_local)
+    # vhost root 切本地 + 标记
+    s = s.replace('root %s;' % root_path, 'root %s; # ABao B03-59' % local_site, 1)
+    if 'ABao B03-59' not in s:
+        s += '\n# ABao B03-59: 动态站程序本地化（数据 uploads 仍在对象存储）\n'
+    open(conf, 'w', encoding='utf-8').write(s)
+    print('  B03-59: vhost %s root -> %s' % (os.path.basename(conf), local_site))
+PYEOF
+    # 2) site.py 一键部署钩子：deploy_install 成功后自动本地化（新建动态站即秒开，幂等）
+    /www/server/mdserver-web/bin/python3 - <<'PYEOF'
+p = '/www/server/mdserver-web/web/admin/site/site.py'
+s = open(p, encoding='utf-8').read()
+if 'ABao B03-59: deploy localize' in s:
+    print('deploy localize hook already present')
+else:
+    old = """    # 目录权限
+    mw.execShell('chown -R www:www ' + root_dir + ' 2>/dev/null; chmod -R 755 ' + root_dir + ' 2>/dev/null; true')
+    mw.writeLog('网站管理', '一键部署 {1} 到站点 {0}'.format(site_name, prog['name']))"""
+    new = """    # ABao B03-59: 动态程序本地化（对象存储 COS IO 延迟导致 WP 每次请求 realpath 累积 10-16s；
+    # 程序放本地磁盘秒开，wp-content/uploads 数据软链回对象存储，网站内容数据仍在 COS）
+    local_hint = ''
+    if prog['type'] == 'php' and os.path.exists(root_dir + '/index.php'):
+        local_site = '/www/server/site_local/' + site_name
+        _abao_shutil.rmtree(local_site, ignore_errors=True)
+        os.makedirs(local_site, exist_ok=True)
+        mw.execShell('cp -rf ' + root_dir + '/* ' + local_site + '/ 2>/dev/null; true')
+        mw.execShell('cp -rf ' + root_dir + '/.[!.]* ' + local_site + '/ 2>/dev/null; true')
+        if prog['key'] == 'wordpress':
+            up_local = local_site + '/wp-content/uploads'
+            up_cos = root_dir + '/wp-content/uploads'
+            _abao_shutil.rmtree(up_local, ignore_errors=True)
+            try:
+                os.makedirs(up_cos, exist_ok=True)
+                os.symlink(up_cos, up_local)
+            except Exception:
+                pass
+        conf = '/www/server/web_conf/nginx/vhost/' + site_name + '.conf'
+        if os.path.exists(conf):
+            c = mw.readFile(conf)
+            c = c.replace('root ' + root_dir + ';', 'root ' + local_site + '; # ABao B03-59')
+            mw.writeFile(conf, c)
+            mw.execShell('/www/server/openresty/nginx/sbin/nginx -t >/dev/null 2>&1 && /www/server/openresty/nginx/sbin/nginx -s reload >/dev/null 2>&1; true')
+        mw.execShell('chown -R www:www ' + local_site + ' 2>/dev/null; chmod -R 755 ' + local_site + ' 2>/dev/null; true')
+        local_hint = '（程序已本地化加速，上传数据仍在对象存储）'
+    # 目录权限
+    mw.execShell('chown -R www:www ' + root_dir + ' 2>/dev/null; chmod -R 755 ' + root_dir + ' 2>/dev/null; true')
+    mw.writeLog('网站管理', '一键部署 {1} 到站点 {0}'.format(site_name, prog['name']))"""
+    if old in s:
+        s = s.replace(old, new, 1)
+        open(p, 'w', encoding='utf-8').write(s)
+        print('deploy localize hook patched')
+    else:
+        print('WARN deploy anchor not found')
+PYEOF
+    /www/server/mdserver-web/bin/python3 -m py_compile /www/server/mdserver-web/web/admin/site/site.py 2>/dev/null \
+        && { systemctl restart abao-mdserver.service >/dev/null 2>&1 || service mdserver-web restart >/dev/null 2>&1 || true; \
+             ok "站点程序本地化已固化（动态站程序在本地磁盘秒开，上传数据仍在对象存储，B03-59）"; } \
+        || warn "site.py 语法检查失败（本地化钩子未生效）"
 }
 
 # ---------- B03-43c：宿主 MySQL 密码注入（面板数据库管理直连用） ----------
