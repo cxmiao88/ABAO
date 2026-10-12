@@ -1149,6 +1149,7 @@ main() {
     setup_obj_disk
     setup_disk_cache
     setup_obj_disk_route
+    setup_site_delete_async
     ensure_backup_dir
     print_summary
     ok "全部完成！如需修改密码：面板「设置」中修改；数据库/Redis 密码见 $ABAO_DIR/.env"
@@ -1747,6 +1748,59 @@ PYEOF
         && { systemctl restart abao-mdserver.service >/dev/null 2>&1 || service mdserver-web restart >/dev/null 2>&1 || true; \
              ok "对象存储容量设置路由已固化（面板设置可配置任意容量，B03-57）"; } \
         || warn "setting.py 语法检查失败（obj_disk 路由未生效）"
+}
+
+# ---------- B03-58：站点删除异步化 + PHP 版本接口兜底（对象存储 cosfs rm 卡 D 状态阻塞接口） ----------
+setup_site_delete_async() {
+    [ -f /www/server/mdserver-web/web/utils/site.py ] || { info "mdserver 未安装，跳过站点删除异步固化"; return; }
+    info "固化站点删除异步删除 + PHP 版本兜底（B03-58，幂等）…"
+    /www/server/mdserver-web/bin/python3 - <<'PYEOF'
+import sys
+p = '/www/server/mdserver-web/web/utils/site.py'
+s = open(p, encoding='utf-8').read()
+changed = False
+# 1) delete() 目录删除改后台异步（cosfs rm 卡 D 状态会阻塞面板接口）
+if 'ABao B03-58' not in s:
+    old = """            if web_root_path and web_root_path != mw.getWwwDir():
+                mw.execShell('rm -rf ' + web_root_path)"""
+    new = """            if web_root_path and web_root_path != mw.getWwwDir():
+                # ABao B03-58: 对象存储 cosfs 目录 rm 可能卡 D 状态阻塞接口（面板无响应）；
+                # 改后台异步删除：接口秒回、站点立即消失，目录后台慢慢清（不阻塞面板）
+                try:
+                    mw.execShell('nohup rm -rf "%s" >/dev/null 2>&1 &' % web_root_path, timeout=5)
+                except Exception:
+                    pass"""
+    if old in s:
+        s = s.replace(old, new, 1)
+        changed = True
+        print('delete async patched')
+    else:
+        print('WARN delete anchor not found')
+# 2) getSitePhpVersion None 兜底（vhost conf 缺失 re.search(None) 500）
+if 'ABao B03-58: vhost' not in s:
+    old2 = """        conf = mw.readFile(self.getHostConf(siteName))
+        rep = r"enable-php-(.*)\\.conf"
+        find_php_cnf = re.search(rep, conf)"""
+    new2 = """        conf = mw.readFile(self.getHostConf(siteName))
+        if not conf:
+            # ABao B03-58: vhost 配置缺失时兜底返回 00（原实现 re.search(None) 直接 500，列表页崩溃）
+            return {'phpversion': '00'}
+        rep = r"enable-php-(.*)\\.conf"
+        find_php_cnf = re.search(rep, conf)"""
+    if old2 in s:
+        s = s.replace(old2, new2, 1)
+        changed = True
+        print('phpversion guard patched')
+    else:
+        print('WARN phpversion anchor not found')
+if changed:
+    open(p, 'w', encoding='utf-8').write(s)
+    print('site.py written')
+PYEOF
+    /www/server/mdserver-web/bin/python3 -m py_compile /www/server/mdserver-web/web/utils/site.py 2>/dev/null \
+        && { systemctl restart abao-mdserver.service >/dev/null 2>&1 || service mdserver-web restart >/dev/null 2>&1 || true; \
+             ok "站点删除异步化已固化（对象存储大目录删除不阻塞面板，B03-58）"; } \
+        || warn "site.py 语法检查失败（删除异步未生效）"
 }
 
 # ---------- B03-43c：宿主 MySQL 密码注入（面板数据库管理直连用） ----------
