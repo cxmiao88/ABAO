@@ -1146,6 +1146,7 @@ main() {
     setup_site_deploy_fix
     setup_disk_fix
     setup_data_disk
+    setup_obj_disk
     setup_disk_cache
     ensure_backup_dir
     print_summary
@@ -1533,6 +1534,7 @@ setup_data_disk() {
         fi
         ln -s "$data_mnt/www/wwwroot" /www/wwwroot
         chown -R www:www "$data_mnt/www/wwwroot" 2>/dev/null || true
+        chmod 755 "$data_mnt/www/wwwroot" 2>/dev/null || true  # B03-56: chown 失败兜底，保证 www 可删站/删文件
         ok "网站目录 /www/wwwroot 已迁移到对象存储 $data_mnt/www/wwwroot（软链），新建网站默认落对象存储；软件/MySQL 留在系统盘"
         return 0
     fi
@@ -1555,6 +1557,27 @@ setup_data_disk() {
     ln -s "$data_mnt/www" /www
     chown -R www:www "$data_mnt/www" 2>/dev/null || true
     ok "/www 已迁移到数据盘 $data_mnt/www（软链），后续网站/软件安装默认落在数据盘"
+}
+
+# ---------- B03-56：对象存储真实容量配置（cosfs df 报 256T 无意义；面板按真实配额显示，如 100G） ----------
+setup_obj_disk() {
+    local obj_mnt="" fs="" mnt=""
+    while read -r fs _ _ _ _ mnt; do
+        case "$fs" in *cosfs*|*fuse*) obj_mnt="$mnt"; break ;; esac
+    done < <(df -h -P 2>/dev/null | tail -n +2)
+    [ -n "$obj_mnt" ] || { info "未检测到对象存储挂载，跳过容量配置（面板对象存储将显示 cosfs 默认 256T，可在挂载后重跑本脚本配置）"; return 0; }
+    local conf="/www/server/mdserver-web/data/obj_disk.conf"
+    if [ -f "$conf" ]; then
+        ok "对象存储容量配置已存在：$(cat "$conf") GB（$conf）"
+        return 0
+    fi
+    info "检测到对象存储挂载：$obj_mnt。cosfs 默认显示 256T，无法反映真实配额。"
+    local gb=""
+    printf "请输入对象存储真实容量（GB，回车默认 100）：" 
+    read -r gb
+    case "$gb" in ''|*[!0-9.]*) gb=100 ;; esac
+    echo "$gb" > "$conf"
+    ok "对象存储容量已配置：${gb} GB（$conf，面板磁盘分区将显示真实容量）"
 }
 
 # ---------- B03-55：disk_info 对象存储 du 缓存（对象存储全量 du 遍历 >20s，前端 20s 超时导致磁盘区空白/系统盘 --/--） ----------
@@ -1619,6 +1642,49 @@ elif '_duUsageCached(disk[5])' in s:
     print('du call already replaced')
 else:
     print('WARN du call anchor not found (skip)')
+# 3) B03-56：对象存储容量读配置（obj_disk.conf，GB），无配置回退 256T；<1T 显示 G
+if 'def _objTotalBytes' not in s:
+    anchor2 = 'def _duUsageCached(path, ttl=600):'
+    func2 = '''def _objTotalBytes():
+    # ABao B03-56: 对象存储真实容量（GB）读 /www/server/mdserver-web/data/obj_disk.conf；无配置回退 cosfs 上限 256T
+    try:
+        cf = '/www/server/mdserver-web/data/obj_disk.conf'
+        if os.path.exists(cf):
+            gb = float(open(cf).read().strip())
+            if gb > 0:
+                return int(gb * 1024 ** 3)
+    except Exception:
+        pass
+    return 256 * 1024 ** 4
+
+'''
+    if anchor2 in s:
+        s = s.replace(anchor2, func2 + anchor2, 1)
+        print('objTotalBytes func inserted')
+    else:
+        print('WARN duUsage anchor not found (skip objTotalBytes)')
+old_tb = """            total_b = 256 * 1024 ** 4  # cosfs df 上限 256T"""
+new_tb = """            total_b = _objTotalBytes()  # B03-56: 容量读配置（GB），无配置回退 256T"""
+if old_tb in s:
+    s = s.replace(old_tb, new_tb, 1)
+    print('total_b source replaced')
+elif '_objTotalBytes()' in s:
+    print('total_b already uses config')
+else:
+    print('WARN total_b anchor not found (skip)')
+old_fmt = """                tmp1 = ['%.1fT' % (total_h / 1024), '%.2fG' % used_h, '%.2fG' % (total_h - used_h), '%.1f%%' % pct]"""
+new_fmt = """                if total_b >= 1024 ** 4:
+                    size_txt = '%.1fT' % (total_h / 1024)
+                else:
+                    size_txt = '%.0fG' % total_h
+                tmp1 = [size_txt, '%.2fG' % used_h, '%.2fG' % (total_h - used_h), '%.1f%%' % pct]"""
+if old_fmt in s:
+    s = s.replace(old_fmt, new_fmt, 1)
+    print('format replaced (G for <1T)')
+elif 'size_txt' in s:
+    print('format already G-capable')
+else:
+    print('WARN format anchor not found (skip)')
 open(p, 'w', encoding='utf-8').write(s)
 PYEOF
     /www/server/mdserver-web/bin/python3 -m py_compile /www/server/mdserver-web/web/utils/system/main.py 2>/dev/null \
