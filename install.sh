@@ -1148,6 +1148,7 @@ main() {
     setup_data_disk
     setup_obj_disk
     setup_disk_cache
+    setup_obj_disk_route
     ensure_backup_dir
     print_summary
     ok "全部完成！如需修改密码：面板「设置」中修改；数据库/Redis 密码见 $ABAO_DIR/.env"
@@ -1691,6 +1692,61 @@ PYEOF
         && { systemctl restart abao-mdserver.service >/dev/null 2>&1 || service mdserver-web restart >/dev/null 2>&1 || true; \
              ok "disk_info du 缓存已固化（对象存储用量 600s 缓存，磁盘区不再空白，B03-55）"; } \
         || warn "main.py 语法检查失败（du 缓存未生效）"
+}
+
+# ---------- B03-57：对象存储容量设置入口路由（面板「设置→对象存储容量」可视化配置任意容量，如 50/60/100/200G） ----------
+setup_obj_disk_route() {
+    [ -f /www/server/mdserver-web/web/admin/setting/setting.py ] || { info "mdserver 未安装，跳过对象存储容量设置路由固化"; return; }
+    info "固化对象存储容量设置路由（/setting/obj_disk，B03-57，幂等）…"
+    /www/server/mdserver-web/bin/python3 - <<'PYEOF'
+import sys
+p = '/www/server/mdserver-web/web/admin/setting/setting.py'
+s = open(p, encoding='utf-8').read()
+if '# ABao B03-57' in s:
+    print('obj_disk route already patched')
+    sys.exit(0)
+anchor = '# 设置安全入口'
+route = '''# ABao B03-57: 对象存储容量配置（面板设置入口；GET/空提交读取，POST 写入 obj_disk.conf，支持任意容量如 50/60/100/200）
+@blueprint.route('/obj_disk', endpoint='obj_disk', methods=['GET', 'POST'])
+@panel_login_required
+def obj_disk():
+    conf = '/www/server/mdserver-web/data/obj_disk.conf'
+    gb = str(request.form.get('gb', '')).strip()
+    if not gb:
+        cur = ''
+        if os.path.exists(conf):
+            cur = open(conf).read().strip()
+        return mw.returnData(True, 'OK', {'gb': cur, 'conf': conf})
+    try:
+        g = float(gb)
+    except Exception:
+        return mw.returnData(False, '容量格式错误，请输入数字（GB）')
+    if g <= 0:
+        return mw.returnData(False, '容量必须大于 0')
+    try:
+        open(conf, 'w').write(str(gb))
+    except Exception as e:
+        return mw.returnData(False, '写入配置失败: %s' % str(e))
+    try:
+        if os.path.exists('/tmp/abao_du_cache.json'):
+            os.remove('/tmp/abao_du_cache.json')
+    except Exception:
+        pass
+    return mw.returnData(True, '对象存储容量已更新为 %s GB' % gb)
+
+
+'''
+if anchor in s:
+    s = s.replace(anchor, route + anchor, 1)
+    open(p, 'w', encoding='utf-8').write(s)
+    print('obj_disk route inserted')
+else:
+    print('WARN anchor not found')
+PYEOF
+    /www/server/mdserver-web/bin/python3 -m py_compile /www/server/mdserver-web/web/admin/setting/setting.py 2>/dev/null \
+        && { systemctl restart abao-mdserver.service >/dev/null 2>&1 || service mdserver-web restart >/dev/null 2>&1 || true; \
+             ok "对象存储容量设置路由已固化（面板设置可配置任意容量，B03-57）"; } \
+        || warn "setting.py 语法检查失败（obj_disk 路由未生效）"
 }
 
 # ---------- B03-43c：宿主 MySQL 密码注入（面板数据库管理直连用） ----------
