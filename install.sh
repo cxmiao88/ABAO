@@ -1146,6 +1146,7 @@ main() {
     setup_site_deploy_fix
     setup_disk_fix
     setup_data_disk
+    setup_disk_cache
     ensure_backup_dir
     print_summary
     ok "全部完成！如需修改密码：面板「设置」中修改；数据库/Redis 密码见 $ABAO_DIR/.env"
@@ -1554,6 +1555,76 @@ setup_data_disk() {
     ln -s "$data_mnt/www" /www
     chown -R www:www "$data_mnt/www" 2>/dev/null || true
     ok "/www 已迁移到数据盘 $data_mnt/www（软链），后续网站/软件安装默认落在数据盘"
+}
+
+# ---------- B03-55：disk_info 对象存储 du 缓存（对象存储全量 du 遍历 >20s，前端 20s 超时导致磁盘区空白/系统盘 --/--） ----------
+setup_disk_cache() {
+    [ -f /www/server/mdserver-web/web/utils/system/main.py ] || { info "mdserver 未安装，跳过 du 缓存固化"; return; }
+    info "固化 disk_info 对象存储 du 缓存（B03-55，幂等）…"
+    local PYC="python3"
+    command -v python3 >/dev/null 2>&1 || PYC="/www/server/mdserver-web/bin/python3"
+    "$PYC" - <<'PYEOF'
+import sys
+p = '/www/server/mdserver-web/web/utils/system/main.py'
+s = open(p, encoding='utf-8').read()
+if '_duUsageCached' in s:
+    print('du cache already patched')
+    sys.exit(0)
+# 1) 在 getDiskInfo 前插入 _duUsageCached（600s 缓存；du 结果写 /tmp/abao_du_cache.json）
+anchor = 'def getDiskInfo():'
+func = '''def _duUsageCached(path, ttl=600):
+    # ABao B03-55: 对象存储 du 遍历慢（>20s），结果缓存 ttl 秒，避免每次 disk_info 都全量 du
+    import json as _json, time as _time
+    cache_file = '/tmp/abao_du_cache.json'
+    try:
+        if os.path.exists(cache_file):
+            cache = _json.load(open(cache_file))
+        else:
+            cache = {}
+    except Exception:
+        cache = {}
+    now = _time.time()
+    hit = cache.get(path)
+    if hit and now - hit.get('t', 0) < ttl:
+        return hit['b']
+    b = mw.execShell('du -sb %s 2>/dev/null' % path)[0].split('\\t')[0].strip()
+    try:
+        b = int(b)
+    except Exception:
+        b = 0
+    cache[path] = {'t': now, 'b': b}
+    try:
+        _json.dump(cache, open(cache_file, 'w'))
+    except Exception:
+        pass
+    return b
+
+'''
+if anchor in s:
+    s = s.replace(anchor, func + anchor, 1)
+    print('cache func inserted')
+else:
+    print('WARN getDiskInfo anchor not found (skip func)')
+# 2) du 直调替换为缓存调用（兼容 B03-52/53 已打过的 du 版）
+old_du = """            used_b = mw.execShell('du -sb %s 2>/dev/null' % disk[5])[0].split('\\t')[0].strip()
+            try:
+                used_b = int(used_b)
+            except Exception:
+                used_b = 0"""
+new_du = """            used_b = _duUsageCached(disk[5])"""
+if old_du in s:
+    s = s.replace(old_du, new_du, 1)
+    print('du call replaced')
+elif '_duUsageCached(disk[5])' in s:
+    print('du call already replaced')
+else:
+    print('WARN du call anchor not found (skip)')
+open(p, 'w', encoding='utf-8').write(s)
+PYEOF
+    /www/server/mdserver-web/bin/python3 -m py_compile /www/server/mdserver-web/web/utils/system/main.py 2>/dev/null \
+        && { systemctl restart abao-mdserver.service >/dev/null 2>&1 || service mdserver-web restart >/dev/null 2>&1 || true; \
+             ok "disk_info du 缓存已固化（对象存储用量 600s 缓存，磁盘区不再空白，B03-55）"; } \
+        || warn "main.py 语法检查失败（du 缓存未生效）"
 }
 
 # ---------- B03-43c：宿主 MySQL 密码注入（面板数据库管理直连用） ----------
