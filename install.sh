@@ -1516,17 +1516,17 @@ PYEOF
 # ---------- B03-61：删站勾选确认（目录/数据库）+ 站点列表 type_id=0 表示全部 ----------
 setup_site_delete_db() {
     [ -d /www/server/mdserver-web/web ] || { info "mdserver 未安装，跳过删站勾选固化"; return; }
-    info "固化删站勾选删目录/数据库（B03-61，幂等）…"
+    info "固化删站勾选删目录/数据库（B03-61 增强：站点→库映射 + site_local 删除，幂等）…"
     local SITE_PY=/www/server/mdserver-web/web/admin/site/site.py
     local THISDB=/www/server/mdserver-web/web/thisdb/sites.py
     local PYC="python3"
     command -v python3 >/dev/null 2>&1 || PYC="/www/server/mdserver-web/bin/python3"
-    # 1) site.py：delete() 读 del_db + _abao_drop_site_database 函数（幂等标记 ABao B03-61）
+    # 1) site.py：delete() 读 del_db/del 本地化目录 + _abao_map_site_db/_abao_drop_site_local/_abao_drop_site_database（幂等标记 ABao B03-61）
     if ! grep -q "ABao B03-61" "$SITE_PY" 2>/dev/null; then
         "$PYC" - <<'PYB0361'
 p = '/www/server/mdserver-web/web/admin/site/site.py'
 s = open(p, encoding='utf-8').read()
-# delete() 路由加 del_db
+# delete() 路由加 del_db + site_local 删除
 old1 = """def delete():
     site_id = request.form.get('id', '')
     path = request.form.get('path', '')
@@ -1537,12 +1537,51 @@ new1 = """def delete():
     del_db = request.form.get('del_db', '')
     if del_db == '1':
         _abao_drop_site_database(site_id)  # ABao B03-61: 勾选删除关联数据库
+    if path == '1':
+        _abao_drop_site_local(site_id)  # ABao B03-61: 同步删除本地化程序目录（B03-59 混合架构）
     return MwSites.instance().delete(site_id, path)"""
 if "# ABao B03-61" not in s:
     s = s.replace(old1, new1, 1)
 fn = r'''
+def _abao_map_site_db(site_name, db_name):
+    """ABao B03-61: 建库即记录「站点→库」映射（site-db-map.json），删除站点时可精确删库，
+    不依赖 wp-config 提取（一键部署中断/无配置文件场景也能删干净）。幂等：覆盖同名站。"""
+    try:
+        if not site_name or not db_name:
+            return
+        f = '/www/server/mdserver-web/data/site-db-map.json'
+        cur = {}
+        if os.path.isfile(f):
+            try:
+                cur = json.loads(open(f, encoding='utf-8').read())
+            except Exception:
+                cur = {}
+        if not isinstance(cur, dict):
+            cur = {}
+        cur[site_name] = db_name
+        open(f, 'w', encoding='utf-8').write(json.dumps(cur, ensure_ascii=False, indent=2))
+    except Exception:
+        pass
+
+
+def _abao_drop_site_local(site_id):
+    """ABao B03-61: 删除本地化程序目录 site_local/<webname>（本地盘，同步删）"""
+    try:
+        info = thisdb.getSitesById(site_id)
+        if not info:
+            return
+        webname = info.get('name', '')
+        if not webname:
+            return
+        local_dir = '/www/server/site_local/' + webname
+        if os.path.isdir(local_dir):
+            mw.execShell('rm -rf ' + local_dir)
+    except Exception:
+        pass
+
+
 def _abao_drop_site_database(site_id):
-    """ABao B03-61: 删除站点时勾选删除关联数据库（扫描站点 CMS 配置提取库名 → DROP DB+USER + 清面板映射）"""
+    """ABao B03-61: 删除站点时勾选删除关联数据库（优先查站点→库映射，其次扫 CMS 配置提取库名 → DROP DB+USER + 清面板映射 + 清映射记录）"""
     try:
         info = thisdb.getSitesById(site_id)
         if not info:
@@ -1550,6 +1589,15 @@ def _abao_drop_site_database(site_id):
         webname = info.get('name', '')
         web_root = info.get('path', '') if info.get('path', '').startswith('/') else (mw.getWwwDir() + '/' + webname)
         db_name = ''
+        # ABao B03-61: 优先查站点→库映射（一键部署建库时记录，不依赖 wp-config）
+        try:
+            mf = '/www/server/mdserver-web/data/site-db-map.json'
+            if os.path.isfile(mf):
+                m = json.loads(open(mf, encoding='utf-8').read())
+                if isinstance(m, dict) and m.get(webname):
+                    db_name = m[webname]
+        except Exception:
+            pass
         for base in (web_root, '/www/server/site_local/' + webname):
             if not base or not os.path.isdir(base):
                 continue
@@ -1598,6 +1646,16 @@ def _abao_drop_site_database(site_id):
                 mw.execShell("docker exec -i coolify sh -c 'umask 077; cat > %s'" % panel + " <<'JSONEOF'\n" + payload + "\nJSONEOF")
         except Exception:
             pass
+        # ABao B03-61: 清站点→库映射记录
+        try:
+            mf = '/www/server/mdserver-web/data/site-db-map.json'
+            if os.path.isfile(mf):
+                m = json.loads(open(mf, encoding='utf-8').read())
+                if isinstance(m, dict) and m.get(webname):
+                    del m[webname]
+                    open(mf, 'w', encoding='utf-8').write(json.dumps(m, ensure_ascii=False, indent=2))
+        except Exception:
+            pass
         return True
     except Exception:
         return False
@@ -1606,11 +1664,17 @@ def _abao_drop_site_database(site_id):
 '''
 if "def _abao_drop_site_database" not in s:
     s = s.replace("def _abao_download_extract", fn + "def _abao_download_extract", 1)
+# deploy_install 建库后写映射（幂等）
+old2 = """        _abao_sync_db_pwd(db_name, db_pwd)  # ABao B03-60: 建库即记录密码，防「未记录」"""
+new2 = """        _abao_sync_db_pwd(db_name, db_pwd)  # ABao B03-60: 建库即记录密码，防「未记录」
+        _abao_map_site_db(site_name, db_name)  # ABao B03-61: 记录站点→库映射，删站时精确删库"""
+if "_abao_map_site_db(site_name" not in s:
+    s = s.replace(old2, new2, 1)
 open(p, 'w', encoding='utf-8').write(s)
 print('site.py B03-61 patched')
 PYB0361
         "$PYC" -c "import ast; ast.parse(open('$SITE_PY', encoding='utf-8').read())" || warn "site.py B03-61 语法检查失败"
-        ok "site.py 删站勾选删库已固化（B03-61）"
+        ok "site.py 删站勾选删库/删目录已固化（B03-61 增强）"
     else
         info "site.py 已含 B03-61 补丁，跳过"
     fi
