@@ -1143,6 +1143,7 @@ main() {
     setup_phpmyadmin_signon
     setup_openresty_reload
     setup_db_password_sync
+    setup_db_pwd_direct_sync
     setup_site_deploy_fix
     setup_disk_fix
     setup_data_disk
@@ -1333,6 +1334,125 @@ ABAODBSYNC
     /usr/bin/python3 /www/server/mdserver-web/scripts/abao_dbsync.py >/dev/null 2>&1 || \
         /www/server/mdserver-web/bin/python3 /www/server/mdserver-web/scripts/abao_dbsync.py >/dev/null 2>&1 || true
     ok "数据库密码同步已固化（一键部署库密码面板可显示，B03-50）"
+}
+
+# ---------- B03-60：建库即记录密码 + dbsync 扫本地化目录（自定义目录建站/本地化后密码不再「未记录」） ----------
+setup_db_pwd_direct_sync() {
+    [ -d /www/server/mdserver-web/web ] || { info "mdserver 未安装，跳过建库即记录密码固化"; return; }
+    info "固化建库即记录密码 + dbsync 扫本地化目录（B03-60，幂等）…"
+    local SITE_PY=/www/server/mdserver-web/web/admin/site/site.py
+    local PYC="python3"
+    command -v python3 >/dev/null 2>&1 || PYC="/www/server/mdserver-web/bin/python3"
+    # 1) site.py：_abao_sync_db_pwd 函数 + deploy_install 建库后立即写面板密码记录 + wp-config 写后校验（幂等标记）
+    if ! grep -q "ABao B03-60" "$SITE_PY" 2>/dev/null; then
+        "$PYC" - <<'PYB0360'
+import io
+p = '/www/server/mdserver-web/web/admin/site/site.py'
+s = open(p, encoding='utf-8').read()
+fn = '''
+def _abao_sync_db_pwd(db_name, db_pwd):
+    """ABao B03-60: 一键部署建库成功后立即把密码写入面板记录（host-db-passwords.json），
+    避免依赖 dbsync 扫描 wp-config 兜底而显示「未记录」。幂等：只增不覆盖已有记录。"""
+    if not db_name or not db_pwd:
+        return
+    panel = '/var/www/html/storage/app/panel/host-db-passwords.json'
+    try:
+        cur_raw = mw.execShell("docker exec coolify sh -c 'cat %s 2>/dev/null || echo {}'" % panel)[0]
+        try:
+            cur = json.loads(cur_raw) if cur_raw.strip() else {}
+        except Exception:
+            cur = {}
+        if not isinstance(cur, dict):
+            cur = {}
+        if db_name not in cur:
+            cur[db_name] = db_pwd
+            payload = json.dumps(cur, ensure_ascii=False)
+            mw.execShell("docker exec -i coolify sh -c 'umask 077; cat > %s'" % panel + " <<'JSONEOF'\\n" + payload + "\\nJSONEOF")
+    except Exception:
+        pass
+
+
+'''
+anchor = "def _abao_download_extract"
+if "_abao_sync_db_pwd" not in s:
+    s = s.replace(anchor, fn + anchor, 1)
+old = """        err = _abao_create_database(db_name, db_user, db_pwd)
+        if err:
+            return mw.returnData(False, err)
+    # 下载解压"""
+new = """        err = _abao_create_database(db_name, db_user, db_pwd)
+        if err:
+            return mw.returnData(False, err)
+        _abao_sync_db_pwd(db_name, db_pwd)  # ABao B03-60: 建库即记录密码，防「未记录」
+    # 下载解压"""
+if "# ABao B03-60: 建库即记录密码" not in s:
+    s = s.replace(old, new, 1)
+old2 = """    mw.writeFile(target_dir + '/wp-config.php', content)
+    return True"""
+new2 = """    mw.writeFile(target_dir + '/wp-config.php', content)
+    if not os.path.exists(target_dir + '/wp-config.php'):
+        return False  # ABao B03-60: 写失败不静默，返回 False 由调用方提示
+    return True"""
+if "写失败不静默" not in s:
+    s = s.replace(old2, new2, 1)
+head = "\n".join(s.split("\n")[:60])
+if "import json" not in head:
+    s = s.replace("import os", "import os\nimport json", 1)
+open(p, 'w', encoding='utf-8').write(s)
+print('site.py B03-60 patched')
+PYB0360
+        "$PYC" -c "import ast; ast.parse(open('$SITE_PY', encoding='utf-8').read())" || warn "site.py B03-60 语法检查失败"
+        ok "site.py 建库即记录密码已固化（B03-60）"
+    else
+        info "site.py 已含 B03-60 补丁，跳过"
+    fi
+    # 2) abao_dbsync.py：扫描加 /www/server/site_local/（本地化程序目录）
+    local DBSYNC=/www/server/mdserver-web/scripts/abao_dbsync.py
+    if ! grep -q "site_local" "$DBSYNC" 2>/dev/null; then
+        "$PYC" - <<'PYB0360B'
+p = '/www/server/mdserver-web/scripts/abao_dbsync.py'
+s = open(p, encoding='utf-8').read()
+old = """    for d in glob.glob(WWWROOT + '/*'):
+        if not os.path.isdir(d):
+            continue
+        for probe, fn in [
+            (os.path.join(d, 'wp-config.php'), extract_wp),
+            (os.path.join(d, 'config.inc.php'), extract_typecho),
+            (os.path.join(d, 'config', 'config.php'), extract_nextcloud),
+            (os.path.join(d, 'zb_users', 'c_option.php'), extract_zblog),
+        ]:
+            if os.path.isfile(probe):
+                r = fn(probe)
+                if r and r[0] and r[1]:
+                    found[r[0]] = r[1]"""
+new = """    for base in (WWWROOT, '/www/server/site_local'):  # ABao B03-60: 本地化程序目录也要扫
+        for d in glob.glob(base + '/*'):
+            if not os.path.isdir(d):
+                continue
+            for probe, fn in [
+                (os.path.join(d, 'wp-config.php'), extract_wp),
+                (os.path.join(d, 'config.inc.php'), extract_typecho),
+                (os.path.join(d, 'config', 'config.php'), extract_nextcloud),
+                (os.path.join(d, 'zb_users', 'c_option.php'), extract_zblog),
+            ]:
+                if os.path.isfile(probe):
+                    r = fn(probe)
+                    if r and r[0] and r[1]:
+                        found[r[0]] = r[1]"""
+if old in s:
+    s = s.replace(old, new, 1)
+    open(p, 'w', encoding='utf-8').write(s)
+    print('dbsync site_local patched')
+PYB0360B
+        "$PYC" -c "import ast; ast.parse(open('$DBSYNC', encoding='utf-8').read())" || warn "abao_dbsync.py B03-60 语法检查失败"
+        /usr/bin/python3 "$DBSYNC" >/dev/null 2>&1 || "$PYC" "$DBSYNC" >/dev/null 2>&1 || true
+        ok "dbsync 已扫本地化目录（B03-60）"
+    else
+        info "dbsync 已含 site_local 扫描，跳过"
+    fi
+    # 3) 重启 mdserver 加载 site.py
+    systemctl restart abao-mdserver.service 2>/dev/null || service abao-mdserver restart 2>/dev/null || true
+    ok "建库即记录密码固化完成（B03-60）"
 }
 
 # ---------- B03-51：一键部署目录修正 + 删站防御（自定义目录名站点部署失败/删站 500） ----------
